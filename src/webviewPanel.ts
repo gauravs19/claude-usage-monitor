@@ -28,8 +28,12 @@ export class UsageDashboardPanel implements vscode.Disposable {
     this.panel.webview.html = this.skeleton();
   }
 
-  update(sessions: SessionSummary[], days: DaySummary[], activity: ActivityRecord[], hooksActive: boolean, currentProject?: string): void {
-    this.panel.webview.postMessage({ type: 'update', sessions, days, activity, hooksActive, currentProject });
+  update(
+    sessions: SessionSummary[], days: DaySummary[], activity: ActivityRecord[],
+    hooksActive: boolean, currentProject?: string,
+    liveMetrics?: { contextPct: number | null; fiveHourPct: number | null; sevenDayPct: number | null; fiveHourResetsAt: Date | null }
+  ): void {
+    this.panel.webview.postMessage({ type: 'update', sessions, days, activity, hooksActive, currentProject, liveMetrics });
   }
 
   reveal(): void {
@@ -198,7 +202,7 @@ function renderSessions(sessions) {
 window.addEventListener('message', e => {
   const msg = e.data;
   if (msg.type !== 'update') return;
-  const { sessions, days, activity, hooksActive, currentProject } = msg;
+  const { sessions, days, activity, hooksActive, currentProject, liveMetrics } = msg;
 
   _allSessions = sessions;
   _days = days;
@@ -232,8 +236,8 @@ window.addEventListener('message', e => {
   const todayCost = todaySessions.reduce((a,s) => a+s.estimatedCostUsd, 0);
   const latest    = sessions[0] ?? null;
 
-  // Context gauge for latest session — use readable label
-  const ctxPct = latest?.contextPct ?? 0;
+  // Prefer live context % from statusLine if available
+  const ctxPct = liveMetrics?.contextPct ?? latest?.contextPct ?? 0;
   const ctxColor = ctxPct >= 80 ? 'var(--red)' : ctxPct >= 60 ? 'var(--yellow)' : 'var(--green)';
 
   // Cache efficiency across today
@@ -241,12 +245,23 @@ window.addEventListener('message', e => {
   const todayCacheRead  = todaySessions.reduce((a,s) => a+s.cacheReadTokens, 0);
   const cacheHitPct = todayTotalInput > 0 ? Math.round(todayCacheRead / todayTotalInput * 100) : 0;
 
+  const fiveHourPct  = liveMetrics?.fiveHourPct  ?? null;
+  const sevenDayPct  = liveMetrics?.sevenDayPct  ?? null;
+  const fiveHourReset = liveMetrics?.fiveHourResetsAt
+    ? 'resets '+new Date(liveMetrics.fiveHourResetsAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+    : 'subscription limit';
+
   document.getElementById('cards').innerHTML = [
     card('Today In',  fmtK(todayIn),  todaySessions.length+' sessions · '+fmtCost(todayCost)+' est.'),
     card('Today Out', fmtK(todayOut), 'cache hit '+cacheHitPct+'%'),
-    latest ? cardWithBar('Context Used', ctxPct+'%', sessionLabel(latest)+' · '+fmtK(latest.tokensPerTurn??0)+'/turn', ctxPct, ctxColor) : '',
-    card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total'),
-  ].join('');
+    cardWithBar('Context Window', Math.round(ctxPct)+'%', latest ? sessionLabel(latest)+' · '+fmtK(latest.tokensPerTurn??0)+'/turn' : '—', ctxPct, ctxColor),
+    fiveHourPct !== null
+      ? cardWithBar('5-Hour Limit', Math.round(fiveHourPct)+'%', fiveHourReset,  fiveHourPct, fiveHourPct>=80?'var(--red)':fiveHourPct>=60?'var(--yellow)':'var(--green)')
+      : card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total'),
+    sevenDayPct !== null
+      ? cardWithBar('7-Day Limit', Math.round(sevenDayPct)+'%', 'subscription limit', sevenDayPct, sevenDayPct>=80?'var(--red)':sevenDayPct>=60?'var(--yellow)':'var(--green)')
+      : card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total'),
+  ].filter((v,i,a) => a.indexOf(v)===i).join(''); // dedup if both rate limit cards are null
 
   // Activity feed
   const feedEl = document.getElementById('activity-feed');

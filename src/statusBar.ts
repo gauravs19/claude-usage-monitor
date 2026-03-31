@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SessionSummary } from './types';
 import { ActivityWatcher } from './activityWatcher';
+import { StatusLineWatcher } from './statusLineWatcher';
 
 function fmtK(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -8,8 +9,7 @@ function fmtK(n: number): string {
   return `${n}`;
 }
 
-function contextBar(pct: number): string {
-  // 5-block bar: ░░░░░ → █████
+function rateBar(pct: number): string {
   const filled = Math.round(pct / 20);
   return '█'.repeat(filled) + '░'.repeat(5 - filled);
 }
@@ -17,15 +17,19 @@ function contextBar(pct: number): string {
 export class StatusBarManager implements vscode.Disposable {
   private item: vscode.StatusBarItem;
   private activityWatcher: ActivityWatcher;
+  private statusLineWatcher: StatusLineWatcher;
   private currentSession: SessionSummary | null = null;
 
-  constructor(activityWatcher: ActivityWatcher) {
+  constructor(activityWatcher: ActivityWatcher, statusLineWatcher: StatusLineWatcher) {
     this.activityWatcher = activityWatcher;
+    this.statusLineWatcher = statusLineWatcher;
+
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.item.command = 'claudeUsage.openPanel';
     this.item.show();
 
     this.activityWatcher.on('activity', () => this.refresh());
+    this.statusLineWatcher.on('update', () => this.refresh());
   }
 
   setCurrentSession(session: SessionSummary | null): void {
@@ -44,53 +48,98 @@ export class StatusBarManager implements vscode.Disposable {
       return;
     }
 
-    if (!this.currentSession) {
-      this.item.text = `$(circuit-board) Claude`;
-      this.item.tooltip = 'Claude Usage — no active session found';
-      return;
-    }
+    // Prefer live statusLine data when available
+    const live = this.statusLineWatcher.getData();
+    const ctxPct = live
+      ? (this.statusLineWatcher.getContextPct() ?? this.currentSession?.contextPct ?? 0)
+      : (this.currentSession?.contextPct ?? 0);
 
-    const s = this.currentSession;
-    const totalIn  = fmtK(s.inputTokens + s.cacheReadTokens + s.cacheCreateTokens);
-    const totalOut = fmtK(s.outputTokens);
-    const cost     = s.estimatedCostUsd < 0.01 ? '<$0.01' : `$${s.estimatedCostUsd.toFixed(2)}`;
-    const ctx      = s.contextPct;
+    const rl = this.statusLineWatcher.getRateLimits();
+    const hasRateLimits = rl.fiveHourPct !== null || rl.sevenDayPct !== null;
 
-    // Colour the status bar when context is getting full
-    if (ctx >= 80) {
+    // Colour thresholds
+    const maxPressure = Math.max(
+      ctxPct,
+      rl.fiveHourPct ?? 0,
+      rl.sevenDayPct ?? 0
+    );
+    if (maxPressure >= 80) {
       this.item.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-    } else if (ctx >= 60) {
+    } else if (maxPressure >= 60) {
       this.item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
     } else {
       this.item.backgroundColor = undefined;
     }
 
-    this.item.text = `$(circuit-board) ${totalIn}↑ ${totalOut}↓  ctx:${ctx}%`;
-    this.item.tooltip = new vscode.MarkdownString([
-      `**Session:** ${s.slug}  |  **Project:** ${s.project}`,
-      `**Turns:** ${s.turns}  |  **~${s.tokensPerTurn.toLocaleString()} tokens/turn**`,
-      ``,
-      `**Context window:** ${ctx}%  ${contextBar(ctx)}`,
-      `Input: ${s.inputTokens.toLocaleString()}  |  Cache read: ${fmtK(s.cacheReadTokens)}  |  Output: ${s.outputTokens.toLocaleString()}`,
-      ``,
-      `**Est. cost (API rates):** ${cost}`,
-      ``,
-      `_Click to open dashboard_`,
-    ].join('\n\n'));
-    this.item.tooltip.isTrusted = true;
+    if (!this.currentSession && !live) {
+      this.item.text = `$(circuit-board) Claude`;
+      this.item.tooltip = 'Claude Usage — no active session';
+      return;
+    }
+
+    // Build status bar text — rate limits take priority when available (more meaningful for subscribers)
+    if (hasRateLimits) {
+      const parts = [`ctx:${Math.round(ctxPct)}%`];
+      if (rl.fiveHourPct !== null) parts.push(`5h:${Math.round(rl.fiveHourPct)}%`);
+      if (rl.sevenDayPct  !== null) parts.push(`7d:${Math.round(rl.sevenDayPct)}%`);
+      this.item.text = `$(circuit-board) ${parts.join(' ')}`;
+    } else {
+      const s = this.currentSession;
+      if (!s) { this.item.text = `$(circuit-board) ctx:${Math.round(ctxPct)}%`; }
+      else {
+        const totalIn  = fmtK(s.inputTokens + s.cacheReadTokens + s.cacheCreateTokens);
+        const totalOut = fmtK(s.outputTokens);
+        this.item.text = `$(circuit-board) ${totalIn}↑ ${totalOut}↓  ctx:${Math.round(ctxPct)}%`;
+      }
+    }
+
+    // Rich tooltip
+    const lines: string[] = [];
+
+    if (live?.model) {
+      lines.push(`**Model:** ${live.model.display_name ?? live.model.id ?? ''}`);
+    } else if (this.currentSession) {
+      lines.push(`**Model:** ${this.currentSession.model}`);
+    }
+
+    if (this.currentSession) {
+      lines.push(`**Session:** ${this.currentSession.project} / ${this.currentSession.slug}`);
+      lines.push(`**Turns:** ${this.currentSession.turns}  |  ~${fmtK(this.currentSession.tokensPerTurn)}/turn`);
+    }
+
+    lines.push('');
+    lines.push(`**Context:** ${Math.round(ctxPct)}%  ${rateBar(ctxPct)}`);
+
+    if (hasRateLimits) {
+      lines.push('');
+      lines.push('**Rate limits (subscription):**');
+      if (rl.fiveHourPct !== null) {
+        const resetStr = rl.fiveHourResetsAt
+          ? ` — resets ${rl.fiveHourResetsAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : '';
+        lines.push(`5-hour: ${Math.round(rl.fiveHourPct)}%  ${rateBar(rl.fiveHourPct)}${resetStr}`);
+      }
+      if (rl.sevenDayPct !== null) {
+        lines.push(`7-day: ${Math.round(rl.sevenDayPct)}%  ${rateBar(rl.sevenDayPct)}`);
+      }
+    } else if (this.currentSession) {
+      const cost = this.currentSession.estimatedCostUsd;
+      lines.push(`**Est. cost (API rates):** ${cost < 0.01 ? '<$0.01' : `$${cost.toFixed(2)}`}`);
+    }
+
+    lines.push('');
+    lines.push('_Click to open dashboard_');
+
+    const tip = new vscode.MarkdownString(lines.join('\n\n'));
+    tip.isTrusted = true;
+    this.item.tooltip = tip;
   }
 
   private toolLabel(tool: string, summary: string): string {
     const toolShort: Record<string, string> = {
-      Bash: 'Shell',
-      Read: 'Reading',
-      Write: 'Writing',
-      Edit: 'Editing',
-      Grep: 'Searching',
-      Glob: 'Scanning',
-      WebFetch: 'Fetching',
-      WebSearch: 'Searching web',
-      Agent: 'Spawning agent',
+      Bash: 'Shell', Read: 'Reading', Write: 'Writing', Edit: 'Editing',
+      Grep: 'Searching', Glob: 'Scanning', WebFetch: 'Fetching',
+      WebSearch: 'Searching web', Agent: 'Spawning agent',
     };
     const prefix = toolShort[tool] ?? tool;
     return summary ? `${prefix}: ${summary.slice(0, 40)}` : prefix;
