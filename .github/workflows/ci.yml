@@ -7,7 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  verify:
+  lint:
+    name: Linting Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,13 +16,49 @@ jobs:
         with:
           node-version: 18
           cache: 'npm'
-      - name: Install dependencies
+      - name: Install
         run: npm ci
-      - name: Type Check (TSC)
-        run: npm run compile
-      - name: Build extension
-        run: npm run build
-      - name: Linting
+      - name: Run ESLint
         run: npm run lint
+
+  compile:
+    name: Static Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      - name: Run TSC
+        run: npm run compile
+
+  test:
+    name: Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+      - name: Install
+        run: npm ci
       - name: Run Tests
         run: npm test
+
+  build:
+    name: Extension Build (ESBuild)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      - name: Run Build
+        run: npm run build
