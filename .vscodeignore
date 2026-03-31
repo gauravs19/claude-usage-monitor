@@ -1,0 +1,8 @@
+src/**
+hooks/**
+node_modules/**
+.vscode/**
+esbuild.js
+tsconfig.json
+*.map
+SPEC.md
