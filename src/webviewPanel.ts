@@ -32,10 +32,8 @@ export class UsageDashboardPanel implements vscode.Disposable {
     this.panel.webview.onDidReceiveMessage(message => {
       if (message.command === 'installHooks') {
         vscode.commands.executeCommand('claudeUsage.installHooks');
-      } else if (message.command === 'refresh') {
+      } else if (message.command === 'refresh' || message.command === 'ready') {
         vscode.commands.executeCommand('claudeUsage.refresh');
-      } else if (message.command === 'exportSession') {
-        this.exportSessionToMarkdown();
       }
     }, undefined, this.disposables);
     this.panel.webview.html = this.skeleton();
@@ -270,6 +268,9 @@ export class UsageDashboardPanel implements vscode.Disposable {
 <script>
 const vscode = acquireVsCodeApi();
 function refresh() { vscode.postMessage({ command: 'refresh' }); }
+
+// Signal the extension that the webview is ready — request initial data push
+vscode.postMessage({ command: 'ready' });
 
 function toggleSection(header) {
   header.classList.toggle('collapsed');
@@ -537,7 +538,7 @@ function renderEfficiency(eff, todayIn, todayOut) {
         <span class="stat-label">Bash error rate <span class="tip-icon">?</span></span>
         <span class="stat-val \${errClass}">\${errPct !== null ? errPct+'%' : '—'}</span>
       </div>
-      <div class="stat-row" data-tip="Output tokens ÷ input tokens.\nHigher = Claude producing more per token consumed.\n<5% = mostly reading context, little writing.\n>15% = good generation-to-consumption ratio.">
+      <div class="stat-row" data-tip="Output tokens ÷ input tokens.\nHigher = Claude producing more per token consumed.\nLow (5%) = mostly reading, little writing.\nGood (15%+) = solid generation-to-consumption ratio.">
         <span class="stat-label">Context efficiency <span class="tip-icon">?</span></span>
         <span class="stat-val \${ctxEffClass}">\${ctxEffPct !== null ? ctxEffPct+'%' : '—'}</span>
       </div>

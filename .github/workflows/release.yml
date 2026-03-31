@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. v0.2.1) — must match package.json'
+        required: true
 
 jobs:
   build-and-release:
@@ -29,16 +33,24 @@ jobs:
           npm run build
           npx @vscode/vsce package --no-dependencies --allow-missing-repository
 
-      - name: Get Version
+      - name: Get Version from package.json
         id: get_version
-        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+        run: echo "VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+
+      - name: Resolve tag name
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG_NAME=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: '*.vsix'
-          name: v${{ env.VERSION }} - Initial Public Release
-          tag_name: v${{ env.VERSION }}
+          name: ${{ env.TAG_NAME }}
+          tag_name: ${{ env.TAG_NAME }}
           draft: false
           prerelease: false
           generate_release_notes: true
