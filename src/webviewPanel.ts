@@ -11,7 +11,7 @@ export class UsageDashboardPanel implements vscode.Disposable {
   private lastProject?: string;
   private lastEfficiency?: EfficiencyStats;
 
-  static show(context: vscode.ExtensionContext): UsageDashboardPanel {
+  static show(): UsageDashboardPanel {
     if (UsageDashboardPanel.currentPanel) {
       UsageDashboardPanel.currentPanel.panel.reveal();
       return UsageDashboardPanel.currentPanel;
@@ -22,11 +22,11 @@ export class UsageDashboardPanel implements vscode.Disposable {
       vscode.ViewColumn.Beside,
       { enableScripts: true, retainContextWhenHidden: true }
     );
-    UsageDashboardPanel.currentPanel = new UsageDashboardPanel(panel, context);
+    UsageDashboardPanel.currentPanel = new UsageDashboardPanel(panel);
     return UsageDashboardPanel.currentPanel;
   }
 
-  private constructor(panel: vscode.WebviewPanel, _context: vscode.ExtensionContext) {
+  private constructor(panel: vscode.WebviewPanel) {
     this.panel = panel;
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
     this.panel.webview.onDidReceiveMessage(message => {

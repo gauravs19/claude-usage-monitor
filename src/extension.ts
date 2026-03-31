@@ -117,7 +117,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('claudeUsage.openPanel', () => {
-      UsageDashboardPanel.show(context);
+      UsageDashboardPanel.show();
       pushToPanel();
     }),
     vscode.commands.registerCommand('claudeUsage.refresh', () => {
