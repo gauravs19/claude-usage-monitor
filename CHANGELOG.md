@@ -5,6 +5,10 @@ All notable changes to the Claude Usage Monitor extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-03-31
+### Added
+- **1-Click Auto Install Hooks**: Replaced complex manual terminal instructions with a single button in the dashboard that safely locates and updates your `~/.claude/settings.json` and local hook scripts automatically. Zero setup friction.
+
 ## [0.1.4] - 2026-03-31
 ### Added
 - **Estimated Time Saved Panel**: Added an explicit ROI calculator to the right of the efficiency panel. Automatically breaks down the exact hours/minutes saved by combining Code Writing, Reading Context, and Executing Tool time compared to a human typing baseline.

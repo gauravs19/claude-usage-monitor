@@ -31,35 +31,13 @@
 ### 1. Install the Extension
 Search for **"Claude Usage Monitor"** in the VS Code Extensions view, or install it directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gauravs19.claude-usage-monitor).
 
-### 2. Copy the Hook Scripts
-Copy the extension's hook scripts to your local Claude configuration directory. Run these commands in your terminal (adjust the path to match your OS):
-```bash
-cp ~/.vscode/extensions/gauravs19.claude-usage-monitor-*/hooks/activity-logger.js ~/.claude/hooks/activity-logger.js
-cp ~/.vscode/extensions/gauravs19.claude-usage-monitor-*/hooks/statusline-bridge.js ~/.claude/hooks/statusline-bridge.js
-```
+### 2. Auto-Install Hooks
+The dashboard requires live hooks in your `~/.claude/settings.json` to stream data without performance overhead.
+1. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
+2. Type and run: **`Claude Usage: Open Dashboard`**
+3. Click the bright green **"1-Click Auto Install"** button at the top of the dashboard.
 
-### 3. Update `settings.json`
-Add the following property configurations to your `~/.claude/settings.json` file:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node $HOME/.claude/hooks/statusline-bridge.js"
-  },
-  "hooks": {
-    "PreToolUse": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "node $HOME/.claude/hooks/activity-logger.js", "async": true }] }
-    ],
-    "PostToolUse": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "node $HOME/.claude/hooks/activity-logger.js", "async": true }] }
-    ],
-    "Stop": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "node $HOME/.claude/hooks/activity-logger.js", "async": true }] }
-    ]
-  }
-}
-```
+*(Alternatively, you can run `Claude Usage: Auto-Install Hooks` directly from the Command Palette).*
 
 ### 4. Reload VS Code
 Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and type **`Developer: Reload Window`**.

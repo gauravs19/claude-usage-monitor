@@ -9,6 +9,7 @@ import { UsageDashboardPanel } from './webviewPanel';
 import { loadAllSessions, aggregateByDay, getClaudeProjectDir } from './usageParser';
 import { detectActiveSessionId } from './sessionDetector';
 import { SessionSummary } from './types';
+import { installHooks } from './hookInstaller';
 
 const ACTIVITY_FILE = path.join(os.homedir(), '.claude', 'activity.jsonl');
 const REFRESH_INTERVAL_MS = 60_000;
@@ -111,6 +112,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('claudeUsage.refresh', () => {
       refresh();
       vscode.window.setStatusBarMessage('Claude Usage: refreshed', 2000);
+    }),
+    vscode.commands.registerCommand('claudeUsage.installHooks', async () => {
+      await installHooks(context);
+      refresh();
     })
   );
 

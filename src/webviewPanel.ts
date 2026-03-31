@@ -25,6 +25,11 @@ export class UsageDashboardPanel implements vscode.Disposable {
   private constructor(panel: vscode.WebviewPanel, _context: vscode.ExtensionContext) {
     this.panel = panel;
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
+    this.panel.webview.onDidReceiveMessage(message => {
+      if (message.command === 'installHooks') {
+        vscode.commands.executeCommand('claudeUsage.installHooks');
+      }
+    }, undefined, this.disposables);
     this.panel.webview.html = this.skeleton();
   }
 
@@ -111,8 +116,10 @@ export class UsageDashboardPanel implements vscode.Disposable {
   .activity-summary { color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
   .activity-dur { color: var(--accent); flex-shrink: 0; font-weight: 600; background: rgba(0, 122, 204, 0.1); padding: 3px 8px; border-radius: 6px; font-size: 11px;}
 
-  .notice { background: rgba(244, 71, 71, 0.1); border-left: 4px solid var(--red); border-radius: 4px; padding: 16px 20px; font-size: 13px; color: var(--fg); line-height: 1.5; }
+  .notice { background: rgba(244, 71, 71, 0.1); border-left: 4px solid var(--red); border-radius: 4px; padding: 16px 20px; font-size: 13px; color: var(--fg); line-height: 1.5; display: flex; align-items: center; justify-content: space-between; }
   .notice code { color: var(--red); font-family: monospace; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; display: block; margin-top: 10px; }
+  .btn-install { background: var(--green); color: #000; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; margin-left: 20px; }
+  .btn-install:hover { opacity: 0.8; }
 
   .empty { color: var(--muted); font-size: 14px; padding: 40px; text-align: center; font-style: italic; background: rgba(0,0,0,0.1); border-radius: 8px; }
 
@@ -336,10 +343,12 @@ window.addEventListener('message', e => {
   const noticeEl = document.getElementById('hooks-notice');
   if (!hooksActive) {
     noticeEl.style.display = 'block';
-    noticeEl.innerHTML = \`<div class="notice">
-      <strong>Live activity requires hooks.</strong> Add to <code>~/.claude/settings.json</code>:
-      <code>"hooks": { "PreToolUse": [{"matcher":"","hooks":[{"type":"command","command":"node ~/.claude/hooks/activity-logger.js"}]}], "PostToolUse": [{"matcher":"","hooks":[{"type":"command","command":"node ~/.claude/hooks/activity-logger.js"}]}] }</code>
-    </div>\`;
+    noticeEl.innerHTML = \`
+      <div class="notice">
+        <div><strong>Live activity requires hooks.</strong> Your ~/.claude/settings.json needs to be updated.</div>
+        <button class="btn-install" onclick="vscode.postMessage({command: 'installHooks'})">1-Click Auto Install</button>
+      </div>
+    \`;
   } else {
     noticeEl.style.display = 'none';
   }
