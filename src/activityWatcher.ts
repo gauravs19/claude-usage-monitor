@@ -51,7 +51,7 @@ export class ActivityWatcher extends EventEmitter {
     return [...this.records];
   }
 
-  computeEfficiency(contextEfficiency?: number | null): EfficiencyStats {
+  computeEfficiency(contextEfficiency?: number | null, sessionCostUsd?: number): EfficiencyStats {
     const postToolUse = this.records.filter(r => r.event === 'PostToolUse' && r.tool);
 
     const statsMap = new Map<string, ToolStat>();
@@ -64,6 +64,17 @@ export class ActivityWatcher extends EventEmitter {
       s.calls++;
       if (r.exitCode !== undefined && r.exitCode !== 0) s.errors++;
       if (r.durationMs) s.totalDurationMs += r.durationMs;
+    }
+
+    const fileStats: Record<string, number> = {};
+    for (const r of this.records) {
+      if (['Read', 'Edit', 'Write', 'View'].includes(r.tool || '') && r.summary) {
+        // Approximate path extraction - usually it's just the summary if it doesn't contain spaces/newlines
+        const path = r.summary.split(' ')[0].trim();
+        if (path && path.includes('/') || path.includes('.')) {
+          fileStats[path] = (fileStats[path] || 0) + 1;
+        }
+      }
     }
 
     const toolBreakdown = Array.from(statsMap.values())
@@ -79,12 +90,38 @@ export class ActivityWatcher extends EventEmitter {
       if (s.calls > 0) avgToolDurationMs[s.tool] = Math.round(s.totalDurationMs / s.calls);
     }
 
+    // Runaway logic: If we have multiple bash calls and most fail
+    const isRunaway = bashStat && bashStat.calls >= 4 && bashErrorRate > 0.40;
+    
+    // Budget limit (defaults to $2.00 if not configured — mock value for now)
+    const budgetLimit = 2.00;
+    const budgetExceeded = sessionCostUsd !== undefined && sessionCostUsd > budgetLimit;
+
+    // Gamification: Prompt Engineer Score (0-100)
+    // 50% = Error Rate (0 errors = 50 pts, >50% errors = 0 pts)
+    const errorScore = Math.max(0, 50 - (bashErrorRate * 100));
+    // 50% = Context Efficiency ( Aiming for 20% output as 'S' rank )
+    const effScore = contextEfficiency ? Math.min(50, (contextEfficiency / 0.20) * 50) : 0;
+    const dailyScore = Math.round(errorScore + effScore);
+
+    let grade = 'C';
+    if (dailyScore >= 90) grade = 'S';
+    else if (dailyScore >= 75) grade = 'A';
+    else if (dailyScore >= 60) grade = 'B';
+    else if (dailyScore < 40) grade = 'F';
+
     return {
       toolBreakdown,
       bashErrorRate,
       avgToolDurationMs,
       contextEfficiency: contextEfficiency ?? null,
       totalToolCalls: postToolUse.length,
+      sessionCostUsd,
+      isRunaway: !!isRunaway,
+      budgetExceeded,
+      fileStats,
+      dailyScore,
+      grade
     };
   }
 

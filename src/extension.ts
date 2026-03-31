@@ -79,16 +79,27 @@ export function activate(context: vscode.ExtensionContext): void {
       const liveData = statusLineWatcher.getData();
       const rateLimits = statusLineWatcher.getRateLimits();
       const current = resolveCurrentSession(sessions);
-      const ctxEff = current && current.inputTokens + current.cacheReadTokens > 0
+      
+      const ctxEff = current && (current.inputTokens + current.cacheReadTokens > 0)
         ? current.outputTokens / (current.inputTokens + current.cacheReadTokens + current.cacheCreateTokens)
         : null;
+      
+      const efficiency = activityWatcher.computeEfficiency(ctxEff, current?.estimatedCostUsd);
+
+      if (efficiency.isRunaway) {
+        vscode.window.setStatusBarMessage('$(warning) Claude: High Bash Errors Detected!', 3000);
+      }
+      if (efficiency.budgetExceeded) {
+        vscode.window.setStatusBarMessage('$(alert) Claude: Session Budget Exceeded!', 3000);
+      }
+
       UsageDashboardPanel.currentPanel.update(
         sessions, days,
         activityWatcher.getRecords(),
         fs.existsSync(ACTIVITY_FILE),
         currentProject,
         liveData ? { ...rateLimits, contextPct: statusLineWatcher.getContextPct() } : undefined,
-        activityWatcher.computeEfficiency(ctxEff)
+        efficiency
       );
     }
   }

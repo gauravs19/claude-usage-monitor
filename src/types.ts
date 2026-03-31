@@ -74,6 +74,12 @@ export interface EfficiencyStats {
   avgToolDurationMs: Record<string, number>;
   contextEfficiency: number | null;  // outputTokens / totalInputTokens (0–1)
   totalToolCalls: number;
+  sessionCostUsd?: number;
+  isRunaway?: boolean;               // Based on high bash error rate in a short window
+  budgetExceeded?: boolean;          // Based on user-defined session limit
+  fileStats?: Record<string, number>; // path -> call count
+  dailyScore?: number;
+  grade?: string;
 }
 
 // Pricing per million tokens (API rates — approximation for subscription users)
