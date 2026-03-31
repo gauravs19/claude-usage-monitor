@@ -2,7 +2,11 @@ src/**
 hooks/**
 node_modules/**
 .vscode/**
+.github/**
 esbuild.js
 tsconfig.json
 *.map
 SPEC.md
+CONTRIBUTING.md
+CHANGELOG.md
+.gitignore

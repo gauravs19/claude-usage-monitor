@@ -1,12 +1,31 @@
 {
   "name": "claude-usage-monitor",
   "displayName": "Claude Usage Monitor",
-  "description": "Real-time Claude Code token usage and activity in the VS Code status bar",
+  "description": "Real-time Claude Code token usage, subscription rate limits, and session efficiency in the VS Code status bar",
   "version": "0.1.0",
   "publisher": "gauravs19",
   "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gauravs19/claude-usage-monitor"
+  },
+  "homepage": "https://github.com/gauravs19/claude-usage-monitor#readme",
+  "bugs": {
+    "url": "https://github.com/gauravs19/claude-usage-monitor/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "token-usage",
+    "ai",
+    "usage-monitor",
+    "rate-limit",
+    "anthropic",
+    "statusbar"
+  ],
   "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other"],
+  "categories": ["Other", "Visualization"],
   "activationEvents": ["onStartupFinished"],
   "main": "./dist/extension.js",
   "contributes": {
@@ -24,7 +43,8 @@
   "scripts": {
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "package": "vsce package"
+    "package": "vsce package",
+    "vscode:prepublish": "node esbuild.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

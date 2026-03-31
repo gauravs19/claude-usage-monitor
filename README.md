@@ -1,53 +1,77 @@
 # Claude Usage Monitor
 
-> VS Code extension — real-time Claude Code token usage, subscription rate limits, and session efficiency in the status bar.
+> Know what Claude Code is doing — and what it's costing you — without leaving VS Code.
 
-![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.85.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.85.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-0.1.0-purple)
 
 ---
 
-## What it does
+## The Problem
 
-Claude Code gives you no ambient visibility into what's being consumed or what it's doing during long processing runs. This extension fixes that.
+Claude Code is a powerful coding agent, but it gives you **zero ambient visibility** into its activity. You can't see:
 
-**Status bar (always visible):**
-- Idle: `ctx:45% 5h:12% 7d:3%` — context window pressure + subscription rate limits
-- Active: `⟳ Editing: extension.ts` — live tool activity, spins while Claude works
-- Colour-coded: yellow at 60%, red at 80% on any metric
+- How much of your context window is consumed
+- Whether you're approaching your 5-hour or 7-day rate limits
+- What tool Claude is currently running during long processing
+- How many tokens a session has burned — or what it's costing you
+- Whether Claude is thrashing on failed shell commands
 
-**Click → Dashboard panel:**
+You're flying blind. This extension fixes that.
 
-| Section | What you get |
+---
+
+## What You Get
+
+### Status Bar (always visible)
+
+| State | Display | What it means |
+|---|---|---|
+| Idle (subscription) | `⊙ ctx:45% 5h:12% 7d:3%` | Context + rate limit usage at a glance |
+| Idle (API key) | `⊙ 42K↑ 8K↓ ctx:45%` | Token counts + context window |
+| Active | `⟳ Shell: npm test` | Live indicator of what Claude is doing |
+| Warning | Yellow background | Any metric hits 60% |
+| Critical | Red background | Any metric hits 80% |
+
+Hover for a rich tooltip: model name, session info, turns, tokens/turn, rate limit reset times.
+
+### Dashboard (click to open)
+
+| Section | What you see |
 |---|---|
-| Summary cards | Today's tokens, cost estimate, context gauge, 5h/7d rate limits |
-| Activity feed | Last 30 tool calls — tool name, what it was doing, duration |
-| Efficiency panel | Tool distribution chart, Bash error rate, context efficiency ratio |
-| Sessions table | Per-session: model, turns, tokens/turn, cache hit %, context %, cost |
-| Daily table | 14-day aggregate — sessions, turns, tokens, estimated cost |
+| **Summary cards** | Today's tokens in/out, cost estimate, context gauge, 5h/7d rate limits |
+| **Activity feed** | Last 30 tool calls — tool name, what it was doing, how long it took |
+| **Efficiency panel** | Tool distribution chart, Bash error rate, context efficiency ratio, action ratio |
+| **Sessions table** | Per-session: model, turns, tokens/turn, cache hit %, context %, cost |
+| **Daily table** | 14-day aggregate — sessions, turns, tokens, estimated cost |
+
+Filter sessions by project. Current workspace is auto-selected.
 
 ---
 
-## Data sources
+## How It Works
 
-Three complementary sources, no external API calls:
+Three local data sources. No external API calls. No telemetry.
 
-| Source | What it provides | Latency |
+| Source | What it reads | Update speed |
 |---|---|---|
 | `~/.claude/projects/**/*.jsonl` | Full session history, token counts per turn | On turn-end |
-| `~/.claude/activity.jsonl` | Live tool activity (hook-written) | ~instant (async) |
-| `~/.claude/statusline-live.json` | Real-time context %, rate limits, transcript path | ~300ms (native statusLine API) |
+| `~/.claude/activity.jsonl` | Live tool activity (via hook scripts) | Near-instant |
+| `~/.claude/statusline-live.json` | Real-time context %, rate limits, model info | ~300ms |
+
+Everything runs locally using `fs.watch` — no polling, minimal overhead.
 
 ---
 
-## Install
+## Quick Start
 
-### 1. Build the extension
+### 1. Install the extension
 
 ```bash
 git clone https://github.com/gauravs19/claude-usage-monitor
 cd claude-usage-monitor
-npm install
-npm run build
+npm install && npm run build
 npx @vscode/vsce package --no-dependencies --allow-missing-repository
 code --install-extension claude-usage-monitor-0.1.0.vsix
 ```
@@ -89,66 +113,41 @@ Add to `~/.claude/settings.json`:
 
 ---
 
-## Status bar states
+## Efficiency Metrics
 
-| State | Display | Meaning |
-|---|---|---|
-| Idle (subscription) | `⊙ ctx:45% 5h:12% 7d:3%` | Context + rate limit usage |
-| Idle (API key) | `⊙ 42K↑ 8K↓ ctx:45%` | Tokens + context |
-| Active tool | `⟳ Shell: npm test` | Claude is running a command |
-| Warning | Yellow background | Any metric ≥ 60% |
-| Critical | Red background | Any metric ≥ 80% |
+The dashboard doesn't just show numbers — it helps you understand session quality:
 
-Hover for a rich tooltip: model, session, turns, tokens/turn, rate limit reset time.
-
----
-
-## Efficiency metrics
-
-The dashboard's **Efficiency** panel helps you understand how a session is going:
-
-| Metric | What it means |
+| Metric | What it tells you |
 |---|---|
-| **Tool distribution** | Which tools Claude is spending time on (bar chart + avg duration) |
-| **Bash error rate** | `exitCode != 0` / total Bash calls — high = Claude is thrashing on commands |
-| **Context efficiency** | `output tokens / input tokens` — low = lots of reading, little output |
-| **Action ratio** | `(Read + Write + Edit) / total calls` — high = editing-heavy session |
+| **Tool distribution** | Which tools Claude uses most (bar chart + avg duration) |
+| **Bash error rate** | % of shell commands that fail — high means Claude is thrashing |
+| **Context efficiency** | Output tokens ÷ input tokens — low means lots of reading, little writing |
+| **Action ratio** | (Read + Write + Edit) ÷ total calls — high means an editing-heavy session |
 
 ---
 
-## Architecture
+## Why This Exists
 
-```
-~/.claude/projects/**/*.jsonl   →  usageParser.ts    →  session/day aggregates
-~/.claude/activity.jsonl        →  activityWatcher.ts →  live tool feed + efficiency
-~/.claude/statusline-live.json  →  statusLineWatcher.ts→  real-time ctx%, rate limits
+Most AI coding tools give you a chat interface and a monthly bill. No visibility in between.
 
-All three → extension.ts → statusBar.ts + webviewPanel.ts
-```
+Claude Code subscription users hit opaque rate limits with no warning. API key users rack up costs with no feedback loop. And everyone wonders "what is Claude doing right now?" during long operations.
 
-**Key design decisions:**
-- `fs.watch` (not polling) on all data files — low overhead
-- Incremental JSONL reads — tracks byte offset, never re-reads full files
-- Hook scripts run `async: true` — never block Claude's tool execution
-- `activity.jsonl` rotates at 2MB — keeps last 50% of lines
-- Session resolved by matching `transcript_path` from statusLine → pid file → recency fallback
+**Claude Usage Monitor** puts usage data where you already work — your editor's status bar — so you can make informed decisions about when to continue, when to pause, and when a session needs a fresh context window.
 
 ---
 
-## How it compares to claude-hud
+## Comparison
 
-[claude-hud](https://github.com/jarrodwatts/claude-hud) is a terminal statusLine plugin. This extension is complementary, not competing:
-
-| | claude-hud | This extension |
-|---|---|---|
-| Surface | Terminal status line | VS Code status bar + webview |
-| History | Current session only | All sessions, 14-day daily view |
-| Rate limits | Yes | Yes (from statusLine bridge) |
-| Cost estimate | No | Yes (API pricing approximation) |
-| Efficiency metrics | No | Yes (tool breakdown, error rate) |
-| Project filter | No | Yes (workspace-scoped) |
-
-Both can coexist — the statusLine bridge outputs the same compact line claude-hud would show in the terminal.
+| Feature | Claude Usage Monitor | Token counters | API dashboards |
+|---|---|---|---|
+| Lives in VS Code | ✅ Status bar + panel | ✅ Status bar only | ❌ Browser tab |
+| Live tool activity | ✅ Real-time feed | ❌ | ❌ |
+| Rate limit tracking | ✅ 5h + 7d limits | ❌ | Partial |
+| Session history | ✅ Multi-session, 14-day | ❌ Current file only | ✅ But delayed |
+| Cost estimation | ✅ Per-session + daily | ✅ Per-file | ✅ |
+| Efficiency analytics | ✅ Error rate, action ratio | ❌ | ❌ |
+| Project filtering | ✅ Workspace-scoped | ❌ | ❌ |
+| Privacy | ✅ 100% local | Varies | ❌ Requires API calls |
 
 ---
 
@@ -158,6 +157,25 @@ Both can coexist — the statusLine bridge outputs the same compact line claude-
 |---|---|
 | `Claude Usage: Open Dashboard` | Open the webview panel |
 | `Claude Usage: Refresh` | Force reload all session data |
+
+---
+
+## Architecture
+
+```
+~/.claude/projects/**/*.jsonl   →  usageParser.ts      →  session/day aggregates
+~/.claude/activity.jsonl        →  activityWatcher.ts   →  live tool feed + efficiency
+~/.claude/statusline-live.json  →  statusLineWatcher.ts →  real-time ctx%, rate limits
+
+All three → extension.ts → statusBar.ts + webviewPanel.ts
+```
+
+**Design choices:**
+- `fs.watch` (not polling) on all data files — minimal CPU overhead
+- Incremental JSONL reads — tracks byte offset, never re-reads full files
+- Hook scripts run `async: true` — never block Claude's tool execution
+- `activity.jsonl` auto-rotates at 2 MB — keeps last 50% of lines
+- Session resolved via transcript_path → PID file → recency fallback
 
 ---
 
