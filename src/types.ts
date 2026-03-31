@@ -55,9 +55,25 @@ export interface ActivityRecord {
   ts: number;
   event: 'PreToolUse' | 'PostToolUse' | 'Stop' | 'Notification';
   tool?: string;
-  summary?: string;   // short description of what the tool is doing
+  summary?: string;
   durationMs?: number;
   exitCode?: number;
+  sessionId?: string;
+}
+
+export interface ToolStat {
+  tool: string;
+  calls: number;
+  errors: number;       // exitCode !== 0
+  totalDurationMs: number;
+}
+
+export interface EfficiencyStats {
+  toolBreakdown: ToolStat[];         // sorted by calls desc
+  bashErrorRate: number;             // 0–1
+  avgToolDurationMs: Record<string, number>;
+  contextEfficiency: number | null;  // outputTokens / totalInputTokens (0–1)
+  totalToolCalls: number;
 }
 
 // Pricing per million tokens (API rates — approximation for subscription users)

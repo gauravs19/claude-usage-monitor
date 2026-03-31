@@ -31,6 +31,7 @@ process.stdin.on('end', () => {
         : event.tool_name   !== undefined ? 'PreToolUse'
         : 'Stop');
     const record = buildRecord(inferredEvent, event);
+    if (event.session_id) record.sessionId = event.session_id;
     rotateIfNeeded();
     fs.appendFileSync(ACTIVITY_FILE, JSON.stringify(record) + '\n', 'utf8');
   } catch (e) {

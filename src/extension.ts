@@ -77,12 +77,17 @@ export function activate(context: vscode.ExtensionContext): void {
       const currentProject = cwd ? path.basename(cwd) : undefined;
       const liveData = statusLineWatcher.getData();
       const rateLimits = statusLineWatcher.getRateLimits();
+      const current = resolveCurrentSession(sessions);
+      const ctxEff = current && current.inputTokens + current.cacheReadTokens > 0
+        ? current.outputTokens / (current.inputTokens + current.cacheReadTokens + current.cacheCreateTokens)
+        : null;
       UsageDashboardPanel.currentPanel.update(
         sessions, days,
         activityWatcher.getRecords(),
         fs.existsSync(ACTIVITY_FILE),
         currentProject,
-        liveData ? { ...rateLimits, contextPct: statusLineWatcher.getContextPct() } : undefined
+        liveData ? { ...rateLimits, contextPct: statusLineWatcher.getContextPct() } : undefined,
+        activityWatcher.computeEfficiency(ctxEff)
       );
     }
   }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SessionSummary, DaySummary, ActivityRecord } from './types';
+import { SessionSummary, DaySummary, ActivityRecord, EfficiencyStats } from './types';
 
 export class UsageDashboardPanel implements vscode.Disposable {
   static currentPanel: UsageDashboardPanel | undefined;
@@ -31,9 +31,10 @@ export class UsageDashboardPanel implements vscode.Disposable {
   update(
     sessions: SessionSummary[], days: DaySummary[], activity: ActivityRecord[],
     hooksActive: boolean, currentProject?: string,
-    liveMetrics?: { contextPct: number | null; fiveHourPct: number | null; sevenDayPct: number | null; fiveHourResetsAt: Date | null }
+    liveMetrics?: { contextPct: number | null; fiveHourPct: number | null; sevenDayPct: number | null; fiveHourResetsAt: Date | null },
+    efficiency?: EfficiencyStats
   ): void {
-    this.panel.webview.postMessage({ type: 'update', sessions, days, activity, hooksActive, currentProject, liveMetrics });
+    this.panel.webview.postMessage({ type: 'update', sessions, days, activity, hooksActive, currentProject, liveMetrics, efficiency });
   }
 
   reveal(): void {
@@ -99,6 +100,24 @@ export class UsageDashboardPanel implements vscode.Disposable {
   .notice code { color: var(--green); font-family: var(--vscode-editor-font-family); font-size: 11px; display: block; margin-top: 6px; }
 
   .empty { color: var(--muted); font-size: 12px; padding: 16px; text-align: center; }
+
+  /* Efficiency section */
+  .eff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .eff-panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+  .eff-panel h4 { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing:.06em; margin-bottom: 10px; }
+  .tool-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+  .tool-bar-label { width: 80px; flex-shrink: 0; color: var(--fg); }
+  .tool-bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .tool-bar-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+  .tool-bar-count { width: 40px; text-align: right; color: var(--muted); flex-shrink: 0; }
+  .tool-bar-dur { width: 42px; text-align: right; color: var(--muted); flex-shrink: 0; font-size: 10px; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-val { font-weight: 600; }
+  .stat-val.good { color: var(--green); }
+  .stat-val.warn { color: var(--yellow); }
+  .stat-val.bad  { color: var(--red); }
+
   .filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .filter-bar select { background: var(--card-bg); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 3px 6px; font-size: 12px; cursor: pointer; }
   .filter-bar label { font-size: 11px; color: var(--muted); }
@@ -117,6 +136,11 @@ export class UsageDashboardPanel implements vscode.Disposable {
   <h3>Activity Feed</h3>
   <div id="activity-feed" class="activity"><p class="empty">Waiting for activity…</p></div>
   <div id="hooks-notice" style="display:none;margin-top:8px"></div>
+</div>
+
+<div class="section">
+  <h3>Efficiency</h3>
+  <div id="efficiency-section" class="eff-grid"></div>
 </div>
 
 <div class="section">
@@ -202,7 +226,7 @@ function renderSessions(sessions) {
 window.addEventListener('message', e => {
   const msg = e.data;
   if (msg.type !== 'update') return;
-  const { sessions, days, activity, hooksActive, currentProject, liveMetrics } = msg;
+  const { sessions, days, activity, hooksActive, currentProject, liveMetrics, efficiency } = msg;
 
   _allSessions = sessions;
   _days = days;
@@ -293,6 +317,9 @@ window.addEventListener('message', e => {
     noticeEl.style.display = 'none';
   }
 
+  // Efficiency section
+  renderEfficiency(efficiency);
+
   // Sessions table — apply current filter
   applyFilter();
 
@@ -311,6 +338,84 @@ window.addEventListener('message', e => {
       </tr>\`).join('')}
     </table>\`;
 });
+
+const TOOL_COLORS = {
+  Bash: '#4ec9b0', Edit: '#569cd6', Write: '#9cdcfe', Read: '#dcdcaa',
+  Grep: '#c586c0', Glob: '#ce9178', WebFetch: '#4fc1ff', Agent: '#f44747',
+};
+
+function renderEfficiency(eff) {
+  const el = document.getElementById('efficiency-section');
+  if (!eff || eff.totalToolCalls === 0) {
+    el.innerHTML = '<p class="empty" style="grid-column:1/-1">No tool activity yet — hooks required for efficiency metrics</p>';
+    return;
+  }
+
+  // Tool breakdown
+  const maxCalls = eff.toolBreakdown[0]?.calls ?? 1;
+  const toolRows = eff.toolBreakdown.slice(0, 8).map(s => {
+    const color = TOOL_COLORS[s.tool] ?? '#888';
+    const pct = Math.round(s.calls / maxCalls * 100);
+    const dur = eff.avgToolDurationMs[s.tool]
+      ? (eff.avgToolDurationMs[s.tool] >= 1000
+          ? (eff.avgToolDurationMs[s.tool]/1000).toFixed(1)+'s'
+          : eff.avgToolDurationMs[s.tool]+'ms')
+      : '';
+    return \`<div class="tool-bar-row">
+      <span class="tool-bar-label">\${s.tool}</span>
+      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:\${pct}%;background:\${color}"></div></div>
+      <span class="tool-bar-count">\${s.calls}</span>
+      <span class="tool-bar-dur">\${dur}</span>
+    </div>\`;
+  }).join('');
+
+  // Stats panel
+  const errPct = Math.round(eff.bashErrorRate * 100);
+  const errClass = errPct >= 30 ? 'bad' : errPct >= 15 ? 'warn' : 'good';
+
+  const ctxEff = eff.contextEfficiency;
+  const ctxEffPct = ctxEff !== null ? Math.round(ctxEff * 100) : null;
+  const ctxEffClass = ctxEffPct === null ? '' : ctxEffPct >= 15 ? 'good' : ctxEffPct >= 5 ? 'warn' : 'bad';
+
+  const totalCalls = eff.totalToolCalls;
+  const readWritePct = eff.toolBreakdown
+    .filter(s => ['Read','Write','Edit'].includes(s.tool))
+    .reduce((a,s) => a + s.calls, 0);
+  const actionRatio = totalCalls > 0 ? Math.round(readWritePct / totalCalls * 100) : 0;
+
+  el.innerHTML = \`
+    <div class="eff-panel">
+      <h4>Tool Distribution — \${totalCalls} calls</h4>
+      \${toolRows}
+    </div>
+    <div class="eff-panel">
+      <h4>Session Introspection</h4>
+      <div class="stat-row">
+        <span>Bash error rate</span>
+        <span class="stat-val \${errClass}">\${errPct}%</span>
+      </div>
+      <div class="stat-row">
+        <span>Context efficiency</span>
+        <span class="stat-val \${ctxEffClass}">\${ctxEffPct !== null ? ctxEffPct+'% output/input' : '—'}</span>
+      </div>
+      <div class="stat-row">
+        <span>Action ratio (Read/Write/Edit)</span>
+        <span class="stat-val">\${actionRatio}%</span>
+      </div>
+      <div class="stat-row">
+        <span>Unique tools used</span>
+        <span class="stat-val">\${eff.toolBreakdown.length}</span>
+      </div>
+      <div class="stat-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <span style="font-size:10px;color:var(--muted)" colspan="2">
+          High error rate → Claude thrashing on shell cmds<br/>
+          Low ctx efficiency → lots of reading, little output<br/>
+          High action ratio → editing-heavy session
+        </span>
+      </div>
+    </div>
+  \`;
+}
 
 function card(label, value, sub) {
   return \`<div class="card"><div class="card-label">\${label}</div><div class="card-value">\${value}</div><div class="card-sub">\${sub}</div></div>\`;

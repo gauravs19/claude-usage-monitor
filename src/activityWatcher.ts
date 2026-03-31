@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { EventEmitter } from 'events';
-import { ActivityRecord } from './types';
+import { ActivityRecord, EfficiencyStats, ToolStat } from './types';
 
 const ACTIVITY_FILE = path.join(os.homedir(), '.claude', 'activity.jsonl');
 const MAX_RECORDS = 50;
@@ -49,6 +49,43 @@ export class ActivityWatcher extends EventEmitter {
 
   getRecords(): ActivityRecord[] {
     return [...this.records];
+  }
+
+  computeEfficiency(contextEfficiency?: number | null): EfficiencyStats {
+    const postToolUse = this.records.filter(r => r.event === 'PostToolUse' && r.tool);
+
+    const statsMap = new Map<string, ToolStat>();
+    for (const r of postToolUse) {
+      const key = r.tool!;
+      if (!statsMap.has(key)) {
+        statsMap.set(key, { tool: key, calls: 0, errors: 0, totalDurationMs: 0 });
+      }
+      const s = statsMap.get(key)!;
+      s.calls++;
+      if (r.exitCode !== undefined && r.exitCode !== 0) s.errors++;
+      if (r.durationMs) s.totalDurationMs += r.durationMs;
+    }
+
+    const toolBreakdown = Array.from(statsMap.values())
+      .sort((a, b) => b.calls - a.calls);
+
+    const bashStat = statsMap.get('Bash');
+    const bashErrorRate = bashStat && bashStat.calls > 0
+      ? bashStat.errors / bashStat.calls
+      : 0;
+
+    const avgToolDurationMs: Record<string, number> = {};
+    for (const s of toolBreakdown) {
+      if (s.calls > 0) avgToolDurationMs[s.tool] = Math.round(s.totalDurationMs / s.calls);
+    }
+
+    return {
+      toolBreakdown,
+      bashErrorRate,
+      avgToolDurationMs,
+      contextEfficiency: contextEfficiency ?? null,
+      totalToolCalls: postToolUse.length,
+    };
   }
 
   getActiveTool(): { tool: string; summary: string } | null {
