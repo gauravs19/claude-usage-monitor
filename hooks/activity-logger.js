@@ -16,6 +16,7 @@ const path = require('path');
 const os   = require('os');
 
 const ACTIVITY_FILE = path.join(os.homedir(), '.claude', 'activity.jsonl');
+const MAX_SIZE_BYTES = 2 * 1024 * 1024; // rotate at 2MB
 const EVENT = process.env.CLAUDE_HOOK_EVENT ?? 'PreToolUse';
 
 let raw = '';
@@ -24,13 +25,32 @@ process.stdin.on('data', chunk => { raw += chunk; });
 process.stdin.on('end', () => {
   try {
     const event = JSON.parse(raw || '{}');
-    const record = buildRecord(EVENT, event);
+    // Infer event type from payload shape if env var is missing
+    const inferredEvent = process.env.CLAUDE_HOOK_EVENT
+      ?? (event.tool_output !== undefined ? 'PostToolUse'
+        : event.tool_name   !== undefined ? 'PreToolUse'
+        : 'Stop');
+    const record = buildRecord(inferredEvent, event);
+    rotateIfNeeded();
     fs.appendFileSync(ACTIVITY_FILE, JSON.stringify(record) + '\n', 'utf8');
   } catch (e) {
     // Never crash — hooks must not block Claude
   }
   process.exit(0);
 });
+
+function rotateIfNeeded() {
+  try {
+    if (!fs.existsSync(ACTIVITY_FILE)) return;
+    const { size } = fs.statSync(ACTIVITY_FILE);
+    if (size < MAX_SIZE_BYTES) return;
+    // Keep the last half — trim from the middle
+    const content = fs.readFileSync(ACTIVITY_FILE, 'utf8');
+    const lines = content.split('\n').filter(Boolean);
+    const keep = lines.slice(Math.floor(lines.length / 2));
+    fs.writeFileSync(ACTIVITY_FILE, keep.join('\n') + '\n', 'utf8');
+  } catch { /* never block */ }
+}
 
 function buildRecord(eventType, event) {
   const base = { ts: Date.now(), event: eventType };

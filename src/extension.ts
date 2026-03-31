@@ -6,9 +6,11 @@ import { ActivityWatcher } from './activityWatcher';
 import { StatusBarManager } from './statusBar';
 import { UsageDashboardPanel } from './webviewPanel';
 import { loadAllSessions, aggregateByDay, getClaudeProjectDir } from './usageParser';
+import { detectActiveSessionId } from './sessionDetector';
+import { SessionSummary } from './types';
 
 const ACTIVITY_FILE = path.join(os.homedir(), '.claude', 'activity.jsonl');
-const REFRESH_INTERVAL_MS = 60_000; // background refresh every 60s
+const REFRESH_INTERVAL_MS = 60_000;
 
 export function activate(context: vscode.ExtensionContext): void {
   const activityWatcher = new ActivityWatcher();
@@ -16,13 +18,34 @@ export function activate(context: vscode.ExtensionContext): void {
 
   activityWatcher.start();
 
-  let sessions = loadAllSessions();
+  let sessions: SessionSummary[] = [];
   let days = aggregateByDay(sessions);
 
-  // Update status bar with most recent session
-  statusBar.setCurrentSession(sessions[0] ?? null);
+  function getWorkspaceCwd(): string | undefined {
+    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  }
 
-  // Watch for new JSONL entries in Claude projects dir
+  function resolveCurrentSession(allSessions: SessionSummary[]): SessionSummary | null {
+    const activeId = detectActiveSessionId(getWorkspaceCwd());
+    if (activeId) {
+      const live = allSessions.find(s => s.sessionId === activeId);
+      if (live) return live;
+    }
+    // Fallback: most recent session active within last 2 hours
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    return allSessions.find(s => s.lastTs > twoHoursAgo) ?? allSessions[0] ?? null;
+  }
+
+  function refresh(): void {
+    sessions = loadAllSessions();
+    days = aggregateByDay(sessions);
+    statusBar.setCurrentSession(resolveCurrentSession(sessions));
+    pushToPanel();
+  }
+
+  refresh();
+
+  // Watch Claude projects dir for new JSONL entries
   let projectDirWatcher: fs.FSWatcher | null = null;
   const claudeDir = getClaudeProjectDir();
 
@@ -30,23 +53,15 @@ export function activate(context: vscode.ExtensionContext): void {
     if (!fs.existsSync(claudeDir)) return;
     try {
       projectDirWatcher = fs.watch(claudeDir, { recursive: true, persistent: false }, () => {
-        sessions = loadAllSessions();
-        days = aggregateByDay(sessions);
-        statusBar.setCurrentSession(sessions[0] ?? null);
-        pushToPanel();
+        refresh();
       });
     } catch { /* watch not supported or dir missing */ }
   }
 
   startProjectDirWatch();
 
-  // Background refresh fallback (catches cases watch misses)
-  const refreshTimer = setInterval(() => {
-    sessions = loadAllSessions();
-    days = aggregateByDay(sessions);
-    statusBar.setCurrentSession(sessions[0] ?? null);
-    pushToPanel();
-  }, REFRESH_INTERVAL_MS);
+  // Background refresh fallback
+  const refreshTimer = setInterval(refresh, REFRESH_INTERVAL_MS);
 
   function pushToPanel(): void {
     if (UsageDashboardPanel.currentPanel) {
@@ -59,19 +74,18 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   }
 
-  activityWatcher.on('activity', () => pushToPanel());
+  activityWatcher.on('activity', () => {
+    statusBar.setCurrentSession(resolveCurrentSession(sessions));
+    pushToPanel();
+  });
 
-  // Commands
   context.subscriptions.push(
     vscode.commands.registerCommand('claudeUsage.openPanel', () => {
       UsageDashboardPanel.show(context);
       pushToPanel();
     }),
     vscode.commands.registerCommand('claudeUsage.refresh', () => {
-      sessions = loadAllSessions();
-      days = aggregateByDay(sessions);
-      statusBar.setCurrentSession(sessions[0] ?? null);
-      pushToPanel();
+      refresh();
       vscode.window.setStatusBarMessage('Claude Usage: refreshed', 2000);
     })
   );

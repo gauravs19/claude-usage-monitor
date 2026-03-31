@@ -154,11 +154,20 @@ window.addEventListener('message', e => {
   const todayCost = todaySessions.reduce((a,s) => a+s.estimatedCostUsd, 0);
   const latest    = sessions[0] ?? null;
 
+  // Context gauge for latest session
+  const ctxPct = latest?.contextPct ?? 0;
+  const ctxColor = ctxPct >= 80 ? 'var(--red)' : ctxPct >= 60 ? 'var(--yellow)' : 'var(--green)';
+
+  // Cache efficiency across today
+  const todayTotalInput = todaySessions.reduce((a,s) => a+s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens, 0);
+  const todayCacheRead  = todaySessions.reduce((a,s) => a+s.cacheReadTokens, 0);
+  const cacheHitPct = todayTotalInput > 0 ? Math.round(todayCacheRead / todayTotalInput * 100) : 0;
+
   document.getElementById('cards').innerHTML = [
-    card('Today In',  fmtK(todayIn),  todaySessions.length+' sessions'),
-    card('Today Out', fmtK(todayOut), fmtCost(todayCost)+' est.'),
-    latest ? card('Last Session', fmtK(latest.inputTokens+latest.cacheReadTokens)+'↑ '+fmtK(latest.outputTokens)+'↓', latest.slug) : '',
-    card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns'),
+    card('Today In',  fmtK(todayIn),  todaySessions.length+' sessions · '+fmtCost(todayCost)+' est.'),
+    card('Today Out', fmtK(todayOut), 'cache hit '+cacheHitPct+'%'),
+    latest ? cardWithBar('Context Used', ctxPct+'%', latest.slug+' · '+fmtK(latest.tokensPerTurn??0)+'/turn', ctxPct, ctxColor) : '',
+    card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total'),
   ].join('');
 
   // Activity feed
@@ -195,17 +204,25 @@ window.addEventListener('message', e => {
   document.getElementById('sessions-table').innerHTML = sessions.length === 0
     ? '<p class="empty">No sessions found in ~/.claude/projects/</p>'
     : \`<table>
-      <tr><th>Session</th><th>Project</th><th>Model</th><th>Turns</th><th>In</th><th>Out</th><th>Cost</th><th>Last</th></tr>
-      \${sessions.slice(0,20).map(s => \`<tr>
-        <td>\${s.slug}</td>
-        <td>\${s.project}</td>
-        <td><span class="model-tag">\${s.model.replace('claude-','').replace('-4-6','4.6').replace('-4-5','4.5')}</span></td>
-        <td>\${s.turns}</td>
-        <td>\${fmtK(s.inputTokens+s.cacheReadTokens)}</td>
-        <td>\${fmtK(s.outputTokens)}</td>
-        <td class="cost">\${fmtCost(s.estimatedCostUsd)}</td>
-        <td>\${relTime(s.lastTs)}</td>
-      </tr>\`).join('')}
+      <tr><th>Session</th><th>Project</th><th>Model</th><th>Turns</th><th>Tok/turn</th><th>In</th><th>Out</th><th>Cache%</th><th>Ctx%</th><th>Cost</th><th>Last</th></tr>
+      \${sessions.slice(0,20).map(s => {
+        const totalIn = s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens;
+        const cacheHit = totalIn > 0 ? Math.round(s.cacheReadTokens/totalIn*100) : 0;
+        const ctxColor = s.contextPct >= 80 ? 'var(--red)' : s.contextPct >= 60 ? 'var(--yellow)' : 'inherit';
+        return \`<tr>
+          <td>\${s.slug}</td>
+          <td>\${s.project}</td>
+          <td><span class="model-tag">\${s.model.replace('claude-','').replace('-4-6','4.6').replace('-4-5','4.5')}</span></td>
+          <td>\${s.turns}</td>
+          <td>\${fmtK(s.tokensPerTurn??0)}</td>
+          <td>\${fmtK(totalIn)}</td>
+          <td>\${fmtK(s.outputTokens)}</td>
+          <td>\${cacheHit}%</td>
+          <td style="color:\${ctxColor}">\${s.contextPct}%</td>
+          <td class="cost">\${fmtCost(s.estimatedCostUsd)}</td>
+          <td>\${relTime(s.lastTs)}</td>
+        </tr>\`;
+      }).join('')}
     </table>\`;
 
   // Days table
@@ -226,6 +243,16 @@ window.addEventListener('message', e => {
 
 function card(label, value, sub) {
   return \`<div class="card"><div class="card-label">\${label}</div><div class="card-value">\${value}</div><div class="card-sub">\${sub}</div></div>\`;
+}
+function cardWithBar(label, value, sub, pct, color) {
+  return \`<div class="card">
+    <div class="card-label">\${label}</div>
+    <div class="card-value" style="color:\${color}">\${value}</div>
+    <div style="margin:4px 0;height:4px;background:var(--border);border-radius:2px">
+      <div style="height:100%;width:\${pct}%;background:\${color};border-radius:2px;transition:width .3s"></div>
+    </div>
+    <div class="card-sub">\${sub}</div>
+  </div>\`;
 }
 </script>
 </body>

@@ -8,6 +8,12 @@ function fmtK(n: number): string {
   return `${n}`;
 }
 
+function contextBar(pct: number): string {
+  // 5-block bar: ░░░░░ → █████
+  const filled = Math.round(pct / 20);
+  return '█'.repeat(filled) + '░'.repeat(5 - filled);
+}
+
 export class StatusBarManager implements vscode.Disposable {
   private item: vscode.StatusBarItem;
   private activityWatcher: ActivityWatcher;
@@ -17,7 +23,6 @@ export class StatusBarManager implements vscode.Disposable {
     this.activityWatcher = activityWatcher;
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.item.command = 'claudeUsage.openPanel';
-    this.item.tooltip = 'Claude Usage — click to open dashboard';
     this.item.show();
 
     this.activityWatcher.on('activity', () => this.refresh());
@@ -41,7 +46,7 @@ export class StatusBarManager implements vscode.Disposable {
 
     if (!this.currentSession) {
       this.item.text = `$(circuit-board) Claude`;
-      this.item.tooltip = 'Claude Usage — no session data yet';
+      this.item.tooltip = 'Claude Usage — no active session found';
       return;
     }
 
@@ -49,19 +54,30 @@ export class StatusBarManager implements vscode.Disposable {
     const totalIn  = fmtK(s.inputTokens + s.cacheReadTokens + s.cacheCreateTokens);
     const totalOut = fmtK(s.outputTokens);
     const cost     = s.estimatedCostUsd < 0.01 ? '<$0.01' : `$${s.estimatedCostUsd.toFixed(2)}`;
+    const ctx      = s.contextPct;
 
-    this.item.text = `$(circuit-board) ${totalIn}↑ ${totalOut}↓ ${cost}`;
-    this.item.tooltip = [
-      `Session: ${s.slug}`,
-      `Project: ${s.project}`,
-      `Turns: ${s.turns}`,
-      `Input: ${s.inputTokens.toLocaleString()} tokens`,
-      `Output: ${s.outputTokens.toLocaleString()} tokens`,
-      `Cache read: ${s.cacheReadTokens.toLocaleString()} tokens`,
-      `Est. cost (API rates): ${cost}`,
-      '',
-      'Click to open dashboard',
-    ].join('\n');
+    // Colour the status bar when context is getting full
+    if (ctx >= 80) {
+      this.item.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+    } else if (ctx >= 60) {
+      this.item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+    } else {
+      this.item.backgroundColor = undefined;
+    }
+
+    this.item.text = `$(circuit-board) ${totalIn}↑ ${totalOut}↓  ctx:${ctx}%`;
+    this.item.tooltip = new vscode.MarkdownString([
+      `**Session:** ${s.slug}  |  **Project:** ${s.project}`,
+      `**Turns:** ${s.turns}  |  **~${s.tokensPerTurn.toLocaleString()} tokens/turn**`,
+      ``,
+      `**Context window:** ${ctx}%  ${contextBar(ctx)}`,
+      `Input: ${s.inputTokens.toLocaleString()}  |  Cache read: ${fmtK(s.cacheReadTokens)}  |  Output: ${s.outputTokens.toLocaleString()}`,
+      ``,
+      `**Est. cost (API rates):** ${cost}`,
+      ``,
+      `_Click to open dashboard_`,
+    ].join('\n\n'));
+    this.item.tooltip.isTrusted = true;
   }
 
   private toolLabel(tool: string, summary: string): string {

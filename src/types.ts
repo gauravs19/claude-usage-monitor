@@ -23,6 +23,23 @@ export interface SessionSummary {
   cacheCreateTokens: number;
   model: string;
   estimatedCostUsd: number;
+  contextPct: number;        // % of model context window used (0–100)
+  tokensPerTurn: number;     // average tokens consumed per turn
+}
+
+// Context window limits per model (tokens)
+export const CONTEXT_LIMITS: Record<string, number> = {
+  'claude-opus-4-6':   200_000,
+  'claude-sonnet-4-6': 200_000,
+  'claude-haiku-4-5':  200_000,
+  default:             200_000,
+};
+
+export function contextPct(session: Pick<SessionSummary, 'inputTokens' | 'cacheReadTokens' | 'cacheCreateTokens' | 'outputTokens' | 'model'>): number {
+  const limit = CONTEXT_LIMITS[session.model] ?? CONTEXT_LIMITS['default'];
+  // Approximate: last-turn input context ≈ cumulative input + cache tokens (they accumulate in context)
+  const total = session.inputTokens + session.cacheReadTokens + session.cacheCreateTokens;
+  return Math.min(100, Math.round((total / limit) * 100));
 }
 
 export interface DaySummary {

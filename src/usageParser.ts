@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { SessionSummary, DaySummary, estimateCost } from './types';
+import { SessionSummary, DaySummary, estimateCost, contextPct } from './types';
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude', 'projects');
 
@@ -84,6 +84,8 @@ export function loadAllSessions(): SessionSummary[] {
               cacheCreateTokens: 0,
               model,
               estimatedCostUsd: 0,
+              contextPct: 0,
+              tokensPerTurn: 0,
             });
           }
 
@@ -96,6 +98,10 @@ export function loadAllSessions(): SessionSummary[] {
           if (line.timestamp > s.lastTs) s.lastTs = line.timestamp;
           if (line.timestamp < s.firstTs) s.firstTs = line.timestamp;
           s.estimatedCostUsd = estimateCost(s);
+          s.contextPct = contextPct(s);
+          s.tokensPerTurn = s.turns > 0
+            ? Math.round((s.inputTokens + s.outputTokens) / s.turns)
+            : 0;
         }
       }
     }
