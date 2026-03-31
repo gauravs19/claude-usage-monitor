@@ -5,13 +5,16 @@ All notable changes to the Claude Usage Monitor extension will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.6] - 2026-03-31
+## [0.1.9] - 2026-03-31
 ### Added
-- **Runaway Agent Kill Switch**: Added real-time detection for high bash failure rates. Notifies you in the status bar if the agent enters a "thrashing" loop.
-- **Session Budget Alerts**: Set a mock $2.00 session budget with bright visual dashboard warnings when reached to prevent massive token burn.
-- **Export Session to Markdown**: 1-click export of your entire tool usage sequence, costs, and efficiency metrics to a documented file.
-- **File Heatmaps**: Visualize exactly which files Claude is reading/viewing most frequently via color-coded intensity mapping.
-- **Prompt Engineer Score**: Gamified ranking (S to F) and normalized scoring based on session context efficiency and error minimize.
+- **Automated Hook Installer**: 1-Click setup for `~/.claude/settings.json` and local hook scripts.
+- **Runaway Agent Kill Switch**: Real-time detection for high bash failure loops with status bar warnings.
+- **Session Budget Alerts**: Visual dashboard warnings when a session exceeds a configurable cost threshold.
+- **Markdown Session Export**: Instantly export tool sequences, costs, and efficiency metrics to a documented file.
+- **File Heatmaps**: Visual intensity mapping for frequently accessed files during AI sessions.
+- **Prompt Engineer Score**: Gamified S-to-F ranking based on context efficiency and error minimization.
+- **Full CI/CD Suite**: 4-job parallel GitHub Actions pipeline for Linting, Type Checking, Unit Testing, and Build verification.
+- **Unit Testing Framework**: Integrated Vitest for regression testing of token parsing and cost logic.
 
 ## [0.1.5] - 2026-03-31
 ### Added
