@@ -28,8 +28,8 @@ export class UsageDashboardPanel implements vscode.Disposable {
     this.panel.webview.html = this.skeleton();
   }
 
-  update(sessions: SessionSummary[], days: DaySummary[], activity: ActivityRecord[], hooksActive: boolean): void {
-    this.panel.webview.postMessage({ type: 'update', sessions, days, activity, hooksActive });
+  update(sessions: SessionSummary[], days: DaySummary[], activity: ActivityRecord[], hooksActive: boolean, currentProject?: string): void {
+    this.panel.webview.postMessage({ type: 'update', sessions, days, activity, hooksActive, currentProject });
   }
 
   reveal(): void {
@@ -95,6 +95,10 @@ export class UsageDashboardPanel implements vscode.Disposable {
   .notice code { color: var(--green); font-family: var(--vscode-editor-font-family); font-size: 11px; display: block; margin-top: 6px; }
 
   .empty { color: var(--muted); font-size: 12px; padding: 16px; text-align: center; }
+  .filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .filter-bar select { background: var(--card-bg); color: var(--fg); border: 1px solid var(--border); border-radius: 3px; padding: 3px 6px; font-size: 12px; cursor: pointer; }
+  .filter-bar label { font-size: 11px; color: var(--muted); }
+  .active-project-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; background: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
@@ -112,7 +116,13 @@ export class UsageDashboardPanel implements vscode.Disposable {
 </div>
 
 <div class="section">
-  <h3>Sessions (recent first)</h3>
+  <div class="filter-bar">
+    <h3 style="margin:0">Sessions</h3>
+    <select id="project-filter" onchange="applyFilter()">
+      <option value="">All projects</option>
+    </select>
+    <span id="active-badge" style="display:none" class="active-project-badge"></span>
+  </div>
   <div id="sessions-table"></div>
 </div>
 
@@ -124,6 +134,10 @@ export class UsageDashboardPanel implements vscode.Disposable {
 <script>
 const vscode = acquireVsCodeApi();
 function refresh() { vscode.postMessage({ type: 'refresh' }); }
+
+let _allSessions = [];
+let _days = [];
+let _currentProject = '';
 
 function fmtK(n) {
   if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
@@ -141,12 +155,76 @@ function relTime(ts) {
   return Math.floor(h/24)+'d ago';
 }
 
+// Readable session label: "project / MM-DD HH:mm" — slug shown on hover
+function sessionLabel(s) {
+  const d = new Date(s.firstTs);
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  return \`\${s.project} / \${mm}-\${dd} \${hh}:\${mi}\`;
+}
+
+function applyFilter() {
+  const sel = document.getElementById('project-filter').value;
+  renderSessions(sel ? _allSessions.filter(s => s.project === sel) : _allSessions);
+}
+
+function renderSessions(sessions) {
+  document.getElementById('sessions-table').innerHTML = sessions.length === 0
+    ? '<p class="empty">No sessions match</p>'
+    : \`<table>
+      <tr><th>Session</th><th>Model</th><th>Turns</th><th>Tok/turn</th><th>In</th><th>Out</th><th>Cache%</th><th>Ctx%</th><th>Cost</th><th>Last</th></tr>
+      \${sessions.slice(0,30).map(s => {
+        const totalIn = s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens;
+        const cacheHit = totalIn > 0 ? Math.round(s.cacheReadTokens/totalIn*100) : 0;
+        const ctxColor = s.contextPct >= 80 ? 'var(--red)' : s.contextPct >= 60 ? 'var(--yellow)' : 'inherit';
+        return \`<tr title="\${s.slug}">
+          <td>\${sessionLabel(s)}</td>
+          <td><span class="model-tag">\${s.model.replace('claude-','').replace('-4-6','4.6').replace('-4-5','4.5')}</span></td>
+          <td>\${s.turns}</td>
+          <td>\${fmtK(s.tokensPerTurn??0)}</td>
+          <td>\${fmtK(totalIn)}</td>
+          <td>\${fmtK(s.outputTokens)}</td>
+          <td>\${cacheHit}%</td>
+          <td style="color:\${ctxColor}">\${s.contextPct}%</td>
+          <td class="cost">\${fmtCost(s.estimatedCostUsd)}</td>
+          <td>\${relTime(s.lastTs)}</td>
+        </tr>\`;
+      }).join('')}
+    </table>\`;
+}
+
 window.addEventListener('message', e => {
   const msg = e.data;
   if (msg.type !== 'update') return;
-  const { sessions, days, activity, hooksActive } = msg;
+  const { sessions, days, activity, hooksActive, currentProject } = msg;
 
-  // Summary cards
+  _allSessions = sessions;
+  _days = days;
+  _currentProject = currentProject ?? '';
+
+  // Populate project filter dropdown, preserve current selection
+  const filterEl = document.getElementById('project-filter');
+  const prevSel = filterEl.value;
+  const projects = [...new Set(sessions.map(s => s.project))].sort();
+  filterEl.innerHTML = '<option value="">All projects</option>'
+    + projects.map(p => \`<option value="\${p}"\${p===prevSel?' selected':''}>\${p}</option>\`).join('');
+
+  // Show active project badge and auto-select current workspace on first load
+  const badge = document.getElementById('active-badge');
+  if (currentProject) {
+    badge.style.display = 'inline';
+    badge.textContent = currentProject;
+    // Auto-select current workspace only if filter hasn't been manually changed
+    if (!prevSel && projects.includes(currentProject)) {
+      filterEl.value = currentProject;
+    }
+  } else {
+    badge.style.display = 'none';
+  }
+
+  // Summary cards — always across ALL sessions for today (not filtered)
   const today = new Date().toISOString().slice(0,10);
   const todaySessions = sessions.filter(s => s.lastTs.slice(0,10) === today);
   const todayIn   = todaySessions.reduce((a,s) => a+s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens, 0);
@@ -154,7 +232,7 @@ window.addEventListener('message', e => {
   const todayCost = todaySessions.reduce((a,s) => a+s.estimatedCostUsd, 0);
   const latest    = sessions[0] ?? null;
 
-  // Context gauge for latest session
+  // Context gauge for latest session — use readable label
   const ctxPct = latest?.contextPct ?? 0;
   const ctxColor = ctxPct >= 80 ? 'var(--red)' : ctxPct >= 60 ? 'var(--yellow)' : 'var(--green)';
 
@@ -166,7 +244,7 @@ window.addEventListener('message', e => {
   document.getElementById('cards').innerHTML = [
     card('Today In',  fmtK(todayIn),  todaySessions.length+' sessions · '+fmtCost(todayCost)+' est.'),
     card('Today Out', fmtK(todayOut), 'cache hit '+cacheHitPct+'%'),
-    latest ? cardWithBar('Context Used', ctxPct+'%', latest.slug+' · '+fmtK(latest.tokensPerTurn??0)+'/turn', ctxPct, ctxColor) : '',
+    latest ? cardWithBar('Context Used', ctxPct+'%', sessionLabel(latest)+' · '+fmtK(latest.tokensPerTurn??0)+'/turn', ctxPct, ctxColor) : '',
     card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total'),
   ].join('');
 
@@ -200,30 +278,8 @@ window.addEventListener('message', e => {
     noticeEl.style.display = 'none';
   }
 
-  // Sessions table
-  document.getElementById('sessions-table').innerHTML = sessions.length === 0
-    ? '<p class="empty">No sessions found in ~/.claude/projects/</p>'
-    : \`<table>
-      <tr><th>Session</th><th>Project</th><th>Model</th><th>Turns</th><th>Tok/turn</th><th>In</th><th>Out</th><th>Cache%</th><th>Ctx%</th><th>Cost</th><th>Last</th></tr>
-      \${sessions.slice(0,20).map(s => {
-        const totalIn = s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens;
-        const cacheHit = totalIn > 0 ? Math.round(s.cacheReadTokens/totalIn*100) : 0;
-        const ctxColor = s.contextPct >= 80 ? 'var(--red)' : s.contextPct >= 60 ? 'var(--yellow)' : 'inherit';
-        return \`<tr>
-          <td>\${s.slug}</td>
-          <td>\${s.project}</td>
-          <td><span class="model-tag">\${s.model.replace('claude-','').replace('-4-6','4.6').replace('-4-5','4.5')}</span></td>
-          <td>\${s.turns}</td>
-          <td>\${fmtK(s.tokensPerTurn??0)}</td>
-          <td>\${fmtK(totalIn)}</td>
-          <td>\${fmtK(s.outputTokens)}</td>
-          <td>\${cacheHit}%</td>
-          <td style="color:\${ctxColor}">\${s.contextPct}%</td>
-          <td class="cost">\${fmtCost(s.estimatedCostUsd)}</td>
-          <td>\${relTime(s.lastTs)}</td>
-        </tr>\`;
-      }).join('')}
-    </table>\`;
+  // Sessions table — apply current filter
+  applyFilter();
 
   // Days table
   document.getElementById('days-table').innerHTML = days.length === 0

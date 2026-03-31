@@ -65,11 +65,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
   function pushToPanel(): void {
     if (UsageDashboardPanel.currentPanel) {
+      const cwd = getWorkspaceCwd();
+      const currentProject = cwd ? require('path').basename(cwd) : undefined;
       UsageDashboardPanel.currentPanel.update(
         sessions,
         days,
         activityWatcher.getRecords(),
-        fs.existsSync(ACTIVITY_FILE)
+        fs.existsSync(ACTIVITY_FILE),
+        currentProject
       );
     }
   }
