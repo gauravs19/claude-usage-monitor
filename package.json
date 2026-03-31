@@ -2,7 +2,7 @@
   "name": "claude-usage-monitor",
   "displayName": "Claude Usage Monitor",
   "description": "Real-time Claude Code token usage, subscription rate limits, and session efficiency in the VS Code status bar",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "publisher": "gauravs19",
   "license": "MIT",
   "icon": "icon.png",
