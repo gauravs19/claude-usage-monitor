@@ -114,157 +114,189 @@ export class UsageDashboardPanel implements vscode.Disposable {
   :root {
     --bg: var(--vscode-editor-background);
     --fg: var(--vscode-editor-foreground);
-    --border: var(--vscode-panel-border, #333);
-    --card-bg: var(--vscode-sideBar-background, #1e1e1e);
+    --border: var(--vscode-panel-border, #2a2a2a);
+    --card-bg: var(--vscode-sideBar-background, #1a1a1a);
     --accent: var(--vscode-focusBorder, #007acc);
     --accent-hover: var(--vscode-textLink-activeForeground, #005a9e);
-    --muted: var(--vscode-descriptionForeground, #888);
+    --muted: var(--vscode-descriptionForeground, #666);
     --green: #4ec9b0;
     --yellow: #dcdcaa;
     --red: #f44747;
-    --glass-bg: rgba(255, 255, 255, 0.02);
-    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-bg: rgba(255,255,255,0.02);
+    --glass-border: rgba(255,255,255,0.05);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', var(--vscode-font-family); font-size: 13px; color: var(--fg); background: var(--bg); padding: 24px; max-width: 1400px; margin: 0 auto; }
-  
-  h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; background: -webkit-linear-gradient(45deg, var(--accent), var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  h3 { font-size: 13px; font-weight: 600; color: var(--fg); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-  h3::before { content: ''; width: 4px; height: 16px; background: var(--accent); border-radius: 2px; }
+  body { font-family: var(--vscode-font-family); font-size: 12px; color: var(--fg); background: var(--bg); padding: 14px 16px; max-width: 1200px; margin: 0 auto; }
 
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-  button { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 6px; }
-  button:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  h2 { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  h3 { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 32px; }
-  .card { background: linear-gradient(160deg, var(--card-bg), var(--bg)); border: 1px solid var(--glass-border); border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; position: relative; overflow: hidden; }
-  .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, var(--accent), transparent); transform: translateX(-100%); transition: transform 0.4s ease; }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); border-color: var(--border); }
-  .card:hover::before { transform: translateX(0); }
-  .card-label { font-size: 12px; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-  .card-value { font-size: 32px; font-weight: 700; color: var(--fg); text-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1; margin-bottom: 8px; }
-  .card-sub { font-size: 12px; color: var(--muted); }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .header-actions { display: flex; gap: 6px; }
+  button { background: var(--card-bg); color: var(--fg); border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: border-color .15s; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  .section { margin-bottom: 32px; padding: 24px; background: var(--glass-bg); border-radius: 12px; border: 1px solid var(--glass-border); }
-  
-  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
-  th { text-align: left; padding: 12px 14px; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--glass-border); white-space: nowrap; }
-  td { padding: 12px 14px; border-bottom: 1px solid var(--glass-border); vertical-align: middle; transition: background 0.2s; }
-  tr { transition: transform 0.1s; }
-  tr:hover td { background: rgba(255,255,255,0.03); }
-  .model-tag { font-size: 11px; padding: 4px 10px; border-radius: 12px; background: rgba(0, 122, 204, 0.15); border: 1px solid rgba(0, 122, 204, 0.3); color: var(--accent); font-weight: 600; }
-  .cost { color: var(--yellow); font-family: monospace; font-size: 14px; font-weight: bold; background: rgba(220, 220, 170, 0.1); padding: 2px 8px; border-radius: 4px; }
+  /* Cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .card { background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 6px; padding: 12px; }
+  .card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .card-value { font-size: 22px; font-weight: 700; line-height: 1.1; }
+  .card-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .card-bar { height: 3px; background: var(--border); border-radius: 2px; margin: 6px 0 2px; }
+  .card-bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
 
-  .grade-badge { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.2); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-  .grade-s { background: linear-gradient(135deg, #ffd700, #ff8c00); }
-  .grade-a { background: linear-gradient(135deg, #4ec9b0, #007acc); }
-  .grade-b { background: linear-gradient(135deg, #007acc, #c586c0); }
-  .grade-c { background: linear-gradient(135deg, #888, #555); }
-  .grade-f { background: linear-gradient(135deg, #f44747, #b22222); }
-  
-  .score-label { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-  .score-title { font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
-  .score-val { font-size: 18px; font-weight: 800; color: var(--fg); }
+  /* Collapsible section */
+  .section { margin-bottom: 10px; border: 1px solid var(--glass-border); border-radius: 6px; overflow: hidden; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; cursor: pointer; user-select: none; background: var(--glass-bg); }
+  .section-header:hover { background: rgba(255,255,255,0.03); }
+  .section-header h3 { margin: 0; }
+  .section-header .toggle { font-size: 10px; color: var(--muted); transition: transform .2s; }
+  .section-header.collapsed .toggle { transform: rotate(-90deg); }
+  .section-body { padding: 12px; }
+  .section-body.hidden { display: none; }
 
-  .activity { max-height: 360px; overflow-y: auto; padding-right: 8px; }
-  .activity::-webkit-scrollbar { width: 6px; }
-  .activity::-webkit-scrollbar-track { background: transparent; }
-  .activity::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-  .activity-item { display: flex; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--glass-border); font-size: 13px; align-items: center; transition: all 0.2s; border-left: 3px solid transparent; background: rgba(0,0,0,0.1); margin-bottom: 4px; border-radius: 0 6px 6px 0; }
-  .activity-item:hover { background: rgba(255,255,255,0.03); border-left-color: var(--accent); transform: translateX(2px); }
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 5px 8px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 5px 8px; border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .model-tag { font-size: 10px; padding: 2px 6px; border-radius: 10px; background: rgba(0,122,204,.15); border: 1px solid rgba(0,122,204,.25); color: var(--accent); }
+  .cost { color: var(--yellow); font-family: monospace; }
+  .mini-bar { display: inline-block; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+
+  /* Grade */
+  .grade-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #fff; }
+  .grade-s { background: linear-gradient(135deg,#ffd700,#ff8c00); }
+  .grade-a { background: linear-gradient(135deg,#4ec9b0,#007acc); }
+  .grade-b { background: linear-gradient(135deg,#007acc,#c586c0); }
+  .grade-c { background: linear-gradient(135deg,#888,#555); }
+  .grade-f { background: linear-gradient(135deg,#f44747,#b22222); }
+
+  /* Activity */
+  .activity { max-height: 220px; overflow-y: auto; }
+  .activity::-webkit-scrollbar { width: 4px; }
+  .activity::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .activity-item { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--glass-border); font-size: 11px; align-items: center; }
   .activity-item:last-child { border-bottom: none; }
-  .activity-ts { color: var(--muted); white-space: nowrap; flex-shrink: 0; font-family: monospace; font-size: 11px; }
-  .activity-tool { color: var(--green); font-weight: 600; flex-shrink: 0; min-width: 90px; padding: 3px 8px; background: rgba(78, 201, 176, 0.1); border-radius: 6px; display: inline-flex; justify-content: center; }
-  .activity-summary { color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-  .activity-dur { color: var(--accent); flex-shrink: 0; font-weight: 600; background: rgba(0, 122, 204, 0.1); padding: 3px 8px; border-radius: 6px; font-size: 11px;}
+  .activity-ts { color: var(--muted); white-space: nowrap; font-family: monospace; font-size: 10px; width: 66px; flex-shrink: 0; }
+  .activity-tool { color: var(--green); font-weight: 600; flex-shrink: 0; min-width: 72px; }
+  .activity-summary { color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; opacity: .8; }
+  .activity-dur { color: var(--muted); flex-shrink: 0; font-size: 10px; font-family: monospace; }
 
-  .notice { background: rgba(244, 71, 71, 0.1); border-left: 4px solid var(--red); border-radius: 4px; padding: 16px 20px; font-size: 13px; color: var(--fg); line-height: 1.5; display: flex; align-items: center; justify-content: space-between; }
-  .notice code { color: var(--red); font-family: monospace; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; display: block; margin-top: 10px; }
-  .btn-install { background: var(--green); color: #000; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; margin-left: 20px; }
-  .btn-install:hover { opacity: 0.8; }
+  /* Notice */
+  .notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; background: rgba(244,71,71,.08); border-left: 3px solid var(--red); border-radius: 0 4px 4px 0; font-size: 11px; margin-bottom: 8px; }
+  .btn-install { background: var(--green); color: #000; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; white-space: nowrap; }
 
-  .empty { color: var(--muted); font-size: 14px; padding: 40px; text-align: center; font-style: italic; background: rgba(0,0,0,0.1); border-radius: 8px; }
-
-  /* Efficiency section */
-  .eff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-  .eff-panel { background: var(--bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
-  .eff-panel h4 { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
-  
-  .tool-bar-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; font-size: 13px; }
-  .tool-bar-label { width: 100px; flex-shrink: 0; color: var(--fg); font-weight: 600; }
-  .tool-bar-track { flex: 1; height: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3); }
-  .tool-bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s cubic-bezier(0.1, 0.8, 0.2, 1); background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; animation: stripemove 2s linear infinite; }
-  @keyframes stripemove { 0% { background-position: 1rem 0; } 100% { background-position: 0 0; } }
-  .tool-bar-count { width: 35px; text-align: right; color: var(--fg); font-weight: bold; }
-  .tool-bar-dur { width: 55px; text-align: right; color: var(--muted); font-size: 11px; }
-  
-  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--glass-border); font-size: 13px; }
+  /* Efficiency */
+  .eff-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .eff-panel h4 { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--glass-border); }
+  .tool-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 11px; }
+  .tool-bar-label { width: 70px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tool-bar-track { flex: 1; height: 8px; background: rgba(0,0,0,0.25); border-radius: 4px; overflow: hidden; }
+  .tool-bar-fill { height: 100%; border-radius: 4px; transition: width .5s cubic-bezier(.1,.8,.2,1); }
+  .tool-bar-count { width: 28px; text-align: right; color: var(--muted); }
+  .tool-bar-dur { width: 38px; text-align: right; color: var(--muted); font-size: 10px; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--glass-border); font-size: 11px; }
   .stat-row:last-child { border-bottom: none; }
-  .stat-val { font-weight: 700; font-size: 15px; padding: 4px 10px; border-radius: 6px; background: rgba(0,0,0,0.1); }
-  .stat-val.good { color: var(--green); background: rgba(78, 201, 176, 0.15); border: 1px solid rgba(78, 201, 176, 0.2); }
-  .stat-val.warn { color: var(--yellow); background: rgba(220, 220, 170, 0.15); border: 1px solid rgba(220, 220, 170, 0.2); }
-  .stat-val.bad  { color: var(--red); background: rgba(244, 71, 71, 0.15); border: 1px solid rgba(244, 71, 71, 0.2); }
+  .stat-val { font-weight: 700; font-size: 12px; }
+  .stat-val.good { color: var(--green); }
+  .stat-val.warn { color: var(--yellow); }
+  .stat-val.bad  { color: var(--red); }
+  .alert-bar { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+  .alert-bar.runaway { background: rgba(244,71,71,.15); color: var(--red); border: 1px solid rgba(244,71,71,.3); }
+  .alert-bar.budget  { background: rgba(220,220,170,.15); color: var(--yellow); border: 1px solid rgba(220,220,170,.3); }
 
-  .filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-  .filter-bar select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
-  .filter-bar select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,122,204,0.2); }
-  .active-project-badge { font-size: 11px; padding: 4px 10px; border-radius: 12px; background: linear-gradient(45deg, var(--accent), var(--green)); color: #fff; font-weight: 600; box-shadow: 0 2px 6px rgba(0,122,204,0.3); }
+  /* Filter */
+  .filter-row { display: flex; align-items: center; gap: 8px; }
+  .filter-row select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; outline: none; }
+  .project-badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 600; }
 
-  /* Animations */
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-  .cards, .section { animation: fadeUp 0.5s cubic-bezier(0.1, 0.8, 0.2, 1) forwards; opacity: 0; }
-  .cards { animation-delay: 0.1s; }
-  .section:nth-of-type(1) { animation-delay: 0.2s; }
-  .section:nth-of-type(2) { animation-delay: 0.3s; }
-  .section:nth-of-type(3) { animation-delay: 0.4s; }
-  .section:nth-of-type(4) { animation-delay: 0.5s; }
+  /* Day trend chart */
+  .chart-wrap { position: relative; }
+  .chart-tooltip { position: absolute; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 10px; pointer-events: none; display: none; white-space: nowrap; z-index: 10; }
+  svg.trend text { font-family: var(--vscode-font-family); }
+
+  .empty { color: var(--muted); font-size: 11px; padding: 24px; text-align: center; }
+  @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+  .cards { animation: fadeIn .3s ease; }
 </style>
 </head>
 <body>
 <div class="header">
-  <div style="display:flex; align-items:center; gap:20px">
-    <h2>⚡ Claude Usage Monitor</h2>
-    <div id="score-container" style="display:flex; align-items:center; gap:12px; border-left:1px solid var(--border); padding-left:20px"></div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <h2>⚡ Claude Usage</h2>
+    <div id="score-container" style="display:flex;align-items:center;gap:8px;border-left:1px solid var(--border);padding-left:12px"></div>
   </div>
-  <div style="display:flex;gap:10px">
-    <button onclick="exportSession()" style="background:var(--card-bg);color:var(--fg);border:1px solid var(--glass-border)">📤 Export Session</button>
-    <button onclick="refresh()">↻ Refresh</button>
+  <div class="header-actions">
+    <button onclick="exportSession()">📤 Export</button>
+    <button class="primary" onclick="refresh()">↻</button>
   </div>
 </div>
 
 <div id="cards" class="cards"></div>
+<div id="hooks-notice"></div>
 
 <div class="section">
-  <h3>Activity Feed</h3>
-  <div id="activity-feed" class="activity"><p class="empty">Waiting for activity…</p></div>
-  <div id="hooks-notice" style="display:none;margin-top:8px"></div>
-</div>
-
-<div class="section">
-  <h3>Efficiency</h3>
-  <div id="efficiency-section" class="eff-grid"></div>
-</div>
-
-<div class="section">
-  <div class="filter-bar">
-    <h3 style="margin:0">Sessions</h3>
-    <select id="project-filter" onchange="applyFilter()">
-      <option value="">All projects</option>
-    </select>
-    <span id="active-badge" style="display:none" class="active-project-badge"></span>
+  <div class="section-header" onclick="toggleSection(this)">
+    <h3>Activity Feed</h3>
+    <span class="toggle">▼</span>
   </div>
-  <div id="sessions-table"></div>
+  <div class="section-body">
+    <div id="activity-feed" class="activity"><p class="empty">Waiting for activity…</p></div>
+  </div>
 </div>
 
 <div class="section">
-  <h3>Daily Usage</h3>
-  <div id="days-table"></div>
+  <div class="section-header" onclick="toggleSection(this)">
+    <h3>Efficiency</h3>
+    <span class="toggle">▼</span>
+  </div>
+  <div class="section-body">
+    <div id="efficiency-section" class="eff-grid"></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header collapsed" onclick="toggleSection(this)">
+    <div class="filter-row">
+      <h3>Sessions</h3>
+      <select id="project-filter" onchange="applyFilter()" onclick="event.stopPropagation()">
+        <option value="">All projects</option>
+      </select>
+      <span id="active-badge" style="display:none" class="project-badge"></span>
+    </div>
+    <span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden">
+    <div id="sessions-table"></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <h3>Daily Trend</h3>
+    <span class="toggle">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="chart-wrap">
+      <div id="chart-tooltip" class="chart-tooltip"></div>
+      <div id="day-chart"></div>
+    </div>
+  </div>
 </div>
 
 <script>
 const vscode = acquireVsCodeApi();
 function refresh() { vscode.postMessage({ command: 'refresh' }); }
 function exportSession() { vscode.postMessage({ command: 'exportSession' }); }
+
+function toggleSection(header) {
+  header.classList.toggle('collapsed');
+  const body = header.nextElementSibling;
+  if (body) body.classList.toggle('hidden');
+}
 
 let _allSessions = [];
 let _days = [];
@@ -443,20 +475,8 @@ window.addEventListener('message', e => {
   // Sessions table — apply current filter
   applyFilter();
 
-  // Days table
-  document.getElementById('days-table').innerHTML = days.length === 0
-    ? '<p class="empty">No data</p>'
-    : \`<table>
-      <tr><th>Date</th><th>Sessions</th><th>Turns</th><th>In</th><th>Out</th><th>Est. Cost</th></tr>
-      \${days.slice(0,14).map(d => \`<tr>
-        <td>\${d.date === today ? '<strong>Today</strong>' : d.date}</td>
-        <td>\${d.sessions}</td>
-        <td>\${d.turns}</td>
-        <td>\${fmtK(d.inputTokens)}</td>
-        <td>\${fmtK(d.outputTokens)}</td>
-        <td class="cost">\${fmtCost(d.estimatedCostUsd)}</td>
-      </tr>\`).join('')}
-    </table>\`;
+  // Daily trend chart
+  renderDayChart(days);
 });
 
 const TOOL_COLORS = {
@@ -466,42 +486,45 @@ const TOOL_COLORS = {
 
 function renderEfficiency(eff, todayIn, todayOut) {
   const el = document.getElementById('efficiency-section');
-  if (!eff || eff.totalToolCalls === 0) {
-    el.innerHTML = '<p class="empty" style="grid-column:1/-1">No tool activity yet — hooks required for efficiency metrics</p>';
+  if (!eff) {
+    el.innerHTML = '<p class="empty" style="grid-column:1/-1">No efficiency data — hooks required</p>';
     return;
   }
+  const noActivity = eff.totalToolCalls === 0;
 
   // Tool breakdown
   const maxCalls = eff.toolBreakdown[0]?.calls ?? 1;
-  const toolRows = eff.toolBreakdown.slice(0, 8).map(s => {
-    const color = TOOL_COLORS[s.tool] ?? '#888';
-    const pct = Math.round(s.calls / maxCalls * 100);
-    const dur = eff.avgToolDurationMs[s.tool]
-      ? (eff.avgToolDurationMs[s.tool] >= 1000
-          ? (eff.avgToolDurationMs[s.tool]/1000).toFixed(1)+'s'
-          : eff.avgToolDurationMs[s.tool]+'ms')
-      : '';
-    return \`<div class="tool-bar-row">
-      <span class="tool-bar-label">\${s.tool}</span>
-      <div class="tool-bar-track"><div class="tool-bar-fill" style="width:\${pct}%;background:\${color}"></div></div>
-      <span class="tool-bar-count">\${s.calls}</span>
-      <span class="tool-bar-dur">\${dur}</span>
-    </div>\`;
-  }).join('');
+  const toolRows = noActivity
+    ? '<p class="empty" style="padding:16px 0">No tool calls yet this session</p>'
+    : eff.toolBreakdown.slice(0, 8).map(s => {
+        const color = TOOL_COLORS[s.tool] ?? '#888';
+        const pct = Math.round(s.calls / maxCalls * 100);
+        const dur = eff.avgToolDurationMs[s.tool]
+          ? (eff.avgToolDurationMs[s.tool] >= 1000
+              ? (eff.avgToolDurationMs[s.tool]/1000).toFixed(1)+'s'
+              : eff.avgToolDurationMs[s.tool]+'ms')
+          : '';
+        return \`<div class="tool-bar-row">
+          <span class="tool-bar-label">\${s.tool}</span>
+          <div class="tool-bar-track"><div class="tool-bar-fill" style="width:\${pct}%;background:\${color}"></div></div>
+          <span class="tool-bar-count">\${s.calls}</span>
+          <span class="tool-bar-dur">\${dur}</span>
+        </div>\`;
+      }).join('');
 
   // Stats panel
-  const errPct = Math.round(eff.bashErrorRate * 100);
-  const errClass = errPct >= 30 ? 'bad' : errPct >= 15 ? 'warn' : 'good';
+  const totalCalls = eff.totalToolCalls;
+  const errPct = noActivity ? null : Math.round(eff.bashErrorRate * 100);
+  const errClass = errPct === null ? '' : errPct >= 30 ? 'bad' : errPct >= 15 ? 'warn' : 'good';
 
   const ctxEff = eff.contextEfficiency;
-  const ctxEffPct = ctxEff !== null ? Math.round(ctxEff * 100) : null;
+  const ctxEffPct = (ctxEff !== null && !noActivity) ? Math.round(ctxEff * 100) : null;
   const ctxEffClass = ctxEffPct === null ? '' : ctxEffPct >= 15 ? 'good' : ctxEffPct >= 5 ? 'warn' : 'bad';
 
-  const totalCalls = eff.totalToolCalls;
   const readWritePct = eff.toolBreakdown
     .filter(s => ['Read','Write','Edit'].includes(s.tool))
     .reduce((a,s) => a + s.calls, 0);
-  const actionRatio = totalCalls > 0 ? Math.round(readWritePct / totalCalls * 100) : 0;
+  const actionRatio = totalCalls > 0 ? Math.round(readWritePct / totalCalls * 100) : null;
 
   const runawayHtml = eff.isRunaway 
     ? \`<div style="background:rgba(244,71,71,0.2); border:1px solid var(--red); color:var(--red); padding:10px; border-radius:8px; margin-bottom:15px; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:8px;">
@@ -524,7 +547,7 @@ function renderEfficiency(eff, todayIn, todayOut) {
       \${budgetHtml}
       <div class="stat-row">
         <span>Bash error rate</span>
-        <span class="stat-val \${errClass}">\${errPct}%</span>
+        <span class="stat-val \${errClass}">\${errPct !== null ? errPct+'%' : '—'}</span>
       </div>
       <div class="stat-row">
         <span>Context efficiency</span>
@@ -532,11 +555,11 @@ function renderEfficiency(eff, todayIn, todayOut) {
       </div>
       <div class="stat-row">
         <span>Action ratio (Read/Write/Edit)</span>
-        <span class="stat-val">\${actionRatio}%</span>
+        <span class="stat-val">\${actionRatio !== null ? actionRatio+'%' : '—'}</span>
       </div>
       <div class="stat-row">
         <span>Unique tools used</span>
-        <span class="stat-val">\${eff.toolBreakdown.length}</span>
+        <span class="stat-val">\${noActivity ? '—' : eff.toolBreakdown.length}</span>
       </div>
       <div class="stat-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
         <span style="font-size:10px;color:var(--muted)" colspan="2">
@@ -550,21 +573,22 @@ function renderEfficiency(eff, todayIn, todayOut) {
       <h4>Estimated Time Saved (Day)</h4>
       <div class="stat-row">
         <span>Automated Typing</span>
-        <span class="stat-val good">+\${Math.round((todayOut || 0) * 0.75 / 60)} mins</span>
+        <span class="stat-val good">\${todayOut > 0 ? '+'+Math.round(todayOut * 0.75 / 60)+' mins' : '—'}</span>
       </div>
       <div class="stat-row">
         <span>Fast-reading Context</span>
-        <span class="stat-val good">+\${Math.round((todayIn || 0) * 0.75 / 250)} mins</span>
+        <span class="stat-val good">\${todayIn > 0 ? '+'+Math.round(todayIn * 0.75 / 250)+' mins' : '—'}</span>
       </div>
       <div class="stat-row">
         <span>Executing Tools</span>
-        <span class="stat-val good">+\${Math.round(totalCalls * 1.5)} mins</span>
+        <span class="stat-val good">\${totalCalls > 0 ? '+'+Math.round(totalCalls * 1.5)+' mins' : '—'}</span>
       </div>
       <div class="stat-row" style="background: rgba(78, 201, 176, 0.1); border: 1px solid var(--green); padding: 12px; border-radius: 8px; margin-top: 16px;">
         <span style="font-weight: 700; color: var(--green);">Total Time Saved</span>
         <span style="font-size: 18px; font-weight: 800; color: var(--green);">
           \${(() => {
             const m = ((todayIn || 0) * 0.75 / 250) + ((todayOut || 0) * 0.75 / 60) + (totalCalls * 1.5);
+            if (m < 1) return '—';
             const h = Math.floor(m / 60);
             return h > 0 ? h + 'h ' + Math.floor(m % 60) + 'm' : Math.floor(m % 60) + 'm';
           })()}
@@ -601,6 +625,53 @@ function renderEfficiency(eff, todayIn, todayOut) {
       </div>
     \`;
   }
+}
+
+function renderDayChart(days) {
+  const el = document.getElementById('day-chart');
+  if (!days || days.length === 0) {
+    el.innerHTML = '<p class="empty">No daily data yet</p>';
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const data = days.slice(0, 14).reverse(); // oldest → newest left-to-right
+  const maxCost = Math.max(...data.map(d => d.estimatedCostUsd), 0.001);
+  const W = 560, H = 72, pad = 3;
+  const barW = Math.floor((W - pad * (data.length + 1)) / data.length);
+  const bars = data.map((d, i) => {
+    const x = pad + i * (barW + pad);
+    const h = Math.max(3, Math.round(d.estimatedCostUsd / maxCost * H));
+    const y = H - h;
+    const isToday = d.date === today;
+    const fill = isToday ? 'var(--accent)' : 'var(--muted)';
+    const lbl = d.date.slice(5); // MM-DD
+    return \`<rect x="\${x}" y="\${y}" width="\${barW}" height="\${h}" rx="2" fill="\${fill}" opacity="\${isToday ? 1 : 0.45}"
+      data-date="\${d.date}" data-sessions="\${d.sessions}" data-turns="\${d.turns}" data-cost="\${d.estimatedCostUsd.toFixed(3)}"
+      style="cursor:pointer"/>
+    <text x="\${x + barW/2}" y="\${H + 13}" text-anchor="middle" font-size="8" fill="var(--muted)">\${lbl}</text>\`;
+  }).join('');
+  el.innerHTML = \`<svg class="trend" viewBox="0 0 \${W} \${H + 18}" width="100%" style="display:block"
+    onmousemove="dayChartHover(event)" onmouseleave="dayChartLeave()">
+    \${bars}
+  </svg>\`;
+}
+
+function dayChartHover(e) {
+  const rect = e.target.closest('rect');
+  if (!rect || !rect.dataset.date) return;
+  const tip = document.getElementById('chart-tooltip');
+  tip.style.display = 'block';
+  tip.innerHTML = \`<strong>\${rect.dataset.date}</strong><br/>\${rect.dataset.sessions} sessions · \${rect.dataset.turns} turns<br/>Est. $\${rect.dataset.cost}\`;
+  const bounds = e.currentTarget.getBoundingClientRect();
+  const tipLeft = e.clientX - bounds.left + 12;
+  const tipTop  = e.clientY - bounds.top  - 40;
+  tip.style.left = tipLeft + 'px';
+  tip.style.top  = tipTop  + 'px';
+}
+
+function dayChartLeave() {
+  const tip = document.getElementById('chart-tooltip');
+  if (tip) tip.style.display = 'none';
 }
 
 function card(label, value, sub) {
