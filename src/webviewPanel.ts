@@ -126,101 +126,92 @@ export class UsageDashboardPanel implements vscode.Disposable {
     --glass-border: rgba(255,255,255,0.05);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: var(--vscode-font-family); font-size: 12px; color: var(--fg); background: var(--bg); padding: 14px 16px; max-width: 1200px; margin: 0 auto; }
+  body { font-family: var(--vscode-font-family); font-size: 11px; color: var(--fg); background: var(--bg); padding: 12px 14px; max-width: 1200px; margin: 0 auto; }
 
-  h2 { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  h3 { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  h2 { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  h3 { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  h4 { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--glass-border); }
 
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-  .header-actions { display: flex; gap: 6px; }
-  button { background: var(--card-bg); color: var(--fg); border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: border-color .15s; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  button { background: var(--card-bg); color: var(--fg); border: 1px solid var(--border); padding: 3px 9px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: border-color .15s; }
   button:hover { border-color: var(--accent); }
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   /* Cards */
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 10px; margin-bottom: 14px; }
-  .card { background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 6px; padding: 12px; }
-  .card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
-  .card-value { font-size: 22px; font-weight: 700; line-height: 1.1; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; animation: fadeIn .3s ease; }
+  .card { background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 5px; padding: 10px 12px; cursor: default; }
+  .card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+  .card-value { font-size: 18px; font-weight: 700; line-height: 1.1; }
   .card-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
-  .card-bar { height: 3px; background: var(--border); border-radius: 2px; margin: 6px 0 2px; }
-  .card-bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
 
   /* Collapsible section */
-  .section { margin-bottom: 10px; border: 1px solid var(--glass-border); border-radius: 6px; overflow: hidden; }
-  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; cursor: pointer; user-select: none; background: var(--glass-bg); }
+  .section { margin-bottom: 8px; border: 1px solid var(--glass-border); border-radius: 5px; overflow: hidden; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; cursor: pointer; user-select: none; background: var(--glass-bg); }
   .section-header:hover { background: rgba(255,255,255,0.03); }
   .section-header h3 { margin: 0; }
-  .section-header .toggle { font-size: 10px; color: var(--muted); transition: transform .2s; }
+  .section-header .toggle { font-size: 9px; color: var(--muted); transition: transform .2s; }
   .section-header.collapsed .toggle { transform: rotate(-90deg); }
-  .section-body { padding: 12px; }
+  .section-body { padding: 10px 12px; }
   .section-body.hidden { display: none; }
 
   /* Tables */
   table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th { text-align: left; padding: 5px 8px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  td { padding: 5px 8px; border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
+  th { text-align: left; padding: 4px 8px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 4px 8px; border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(255,255,255,0.02); }
-  .model-tag { font-size: 10px; padding: 2px 6px; border-radius: 10px; background: rgba(0,122,204,.15); border: 1px solid rgba(0,122,204,.25); color: var(--accent); }
-  .cost { color: var(--yellow); font-family: monospace; }
-  .mini-bar { display: inline-block; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+  .model-tag { font-size: 10px; padding: 1px 5px; border-radius: 8px; background: rgba(0,122,204,.15); border: 1px solid rgba(0,122,204,.25); color: var(--accent); }
+  .cost { color: var(--yellow); }
 
   /* Grade */
-  .grade-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #fff; }
+  .grade-badge { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: #fff; }
   .grade-s { background: linear-gradient(135deg,#ffd700,#ff8c00); }
   .grade-a { background: linear-gradient(135deg,#4ec9b0,#007acc); }
   .grade-b { background: linear-gradient(135deg,#007acc,#c586c0); }
   .grade-c { background: linear-gradient(135deg,#888,#555); }
   .grade-f { background: linear-gradient(135deg,#f44747,#b22222); }
 
-  /* Activity */
-  .activity { max-height: 220px; overflow-y: auto; }
-  .activity::-webkit-scrollbar { width: 4px; }
-  .activity::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  .activity-item { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--glass-border); font-size: 11px; align-items: center; }
-  .activity-item:last-child { border-bottom: none; }
-  .activity-ts { color: var(--muted); white-space: nowrap; font-family: monospace; font-size: 10px; width: 66px; flex-shrink: 0; }
-  .activity-tool { color: var(--green); font-weight: 600; flex-shrink: 0; min-width: 72px; }
-  .activity-summary { color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; opacity: .8; }
-  .activity-dur { color: var(--muted); flex-shrink: 0; font-size: 10px; font-family: monospace; }
-
   /* Notice */
-  .notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; background: rgba(244,71,71,.08); border-left: 3px solid var(--red); border-radius: 0 4px 4px 0; font-size: 11px; margin-bottom: 8px; }
-  .btn-install { background: var(--green); color: #000; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; white-space: nowrap; }
+  .notice { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; background: rgba(244,71,71,.08); border-left: 3px solid var(--red); border-radius: 0 4px 4px 0; font-size: 11px; margin-bottom: 8px; }
+  .btn-install { background: var(--green); color: #000; border: none; padding: 3px 9px; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 11px; white-space: nowrap; }
 
   /* Efficiency */
-  .eff-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  .eff-panel h4 { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--glass-border); }
-  .tool-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 11px; }
-  .tool-bar-label { width: 70px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tool-bar-track { flex: 1; height: 8px; background: rgba(0,0,0,0.25); border-radius: 4px; overflow: hidden; }
-  .tool-bar-fill { height: 100%; border-radius: 4px; transition: width .5s cubic-bezier(.1,.8,.2,1); }
-  .tool-bar-count { width: 28px; text-align: right; color: var(--muted); }
-  .tool-bar-dur { width: 38px; text-align: right; color: var(--muted); font-size: 10px; }
-  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--glass-border); font-size: 11px; }
+  .eff-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .tool-bar-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .tool-bar-label { width: 64px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tool-bar-track { flex: 1; height: 6px; background: rgba(0,0,0,0.25); border-radius: 3px; overflow: hidden; }
+  .tool-bar-fill { height: 100%; border-radius: 3px; transition: width .5s cubic-bezier(.1,.8,.2,1); }
+  .tool-bar-count { width: 24px; text-align: right; color: var(--muted); }
+  .tool-bar-dur { width: 34px; text-align: right; color: var(--muted); }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--glass-border); }
   .stat-row:last-child { border-bottom: none; }
-  .stat-val { font-weight: 700; font-size: 12px; }
+  .stat-label { display: flex; align-items: center; gap: 4px; }
+  .stat-val { font-weight: 700; }
   .stat-val.good { color: var(--green); }
   .stat-val.warn { color: var(--yellow); }
   .stat-val.bad  { color: var(--red); }
-  .alert-bar { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-bottom: 6px; }
-  .alert-bar.runaway { background: rgba(244,71,71,.15); color: var(--red); border: 1px solid rgba(244,71,71,.3); }
-  .alert-bar.budget  { background: rgba(220,220,170,.15); color: var(--yellow); border: 1px solid rgba(220,220,170,.3); }
+  .alert-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 3px; font-size: 10px; font-weight: 600; margin-bottom: 5px; }
+  .alert-pill.runaway { background: rgba(244,71,71,.15); color: var(--red); border: 1px solid rgba(244,71,71,.3); }
+  .alert-pill.budget  { background: rgba(220,220,170,.15); color: var(--yellow); border: 1px solid rgba(220,220,170,.3); }
+  .total-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: 4px; background: rgba(78,201,176,.08); border: 1px solid rgba(78,201,176,.2); margin-top: 8px; }
 
   /* Filter */
-  .filter-row { display: flex; align-items: center; gap: 8px; }
-  .filter-row select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; outline: none; }
-  .project-badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 600; }
+  .filter-row { display: flex; align-items: center; gap: 6px; }
+  .filter-row select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; outline: none; }
+  .project-badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; }
 
   /* Day trend chart */
   .chart-wrap { position: relative; }
   .chart-tooltip { position: absolute; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 10px; pointer-events: none; display: none; white-space: nowrap; z-index: 10; }
   svg.trend text { font-family: var(--vscode-font-family); }
 
-  .empty { color: var(--muted); font-size: 11px; padding: 24px; text-align: center; }
+  /* Hover tooltip */
+  .tip { position: fixed; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 9px; font-size: 10px; line-height: 1.5; pointer-events: none; display: none; white-space: pre-line; z-index: 100; max-width: 240px; color: var(--fg); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+  [data-tip] { cursor: help; }
+  .tip-icon { font-size: 9px; color: var(--muted); opacity: .6; }
+
+  .empty { color: var(--muted); font-size: 11px; padding: 20px; text-align: center; }
   @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
-  .cards { animation: fadeIn .3s ease; }
 </style>
 </head>
 <body>
@@ -229,24 +220,11 @@ export class UsageDashboardPanel implements vscode.Disposable {
     <h2>⚡ Claude Usage</h2>
     <div id="score-container" style="display:flex;align-items:center;gap:8px;border-left:1px solid var(--border);padding-left:12px"></div>
   </div>
-  <div class="header-actions">
-    <button onclick="exportSession()">📤 Export</button>
-    <button class="primary" onclick="refresh()">↻</button>
-  </div>
+  <button class="primary" onclick="refresh()">↻</button>
 </div>
 
 <div id="cards" class="cards"></div>
 <div id="hooks-notice"></div>
-
-<div class="section">
-  <div class="section-header" onclick="toggleSection(this)">
-    <h3>Activity Feed</h3>
-    <span class="toggle">▼</span>
-  </div>
-  <div class="section-body">
-    <div id="activity-feed" class="activity"><p class="empty">Waiting for activity…</p></div>
-  </div>
-</div>
 
 <div class="section">
   <div class="section-header" onclick="toggleSection(this)">
@@ -287,16 +265,38 @@ export class UsageDashboardPanel implements vscode.Disposable {
   </div>
 </div>
 
+<div id="tip" class="tip"></div>
+
 <script>
 const vscode = acquireVsCodeApi();
 function refresh() { vscode.postMessage({ command: 'refresh' }); }
-function exportSession() { vscode.postMessage({ command: 'exportSession' }); }
 
 function toggleSection(header) {
   header.classList.toggle('collapsed');
   const body = header.nextElementSibling;
   if (body) body.classList.toggle('hidden');
 }
+
+// Global hover tooltip — any element with data-tip shows an explanation
+const _tip = document.getElementById('tip');
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest('[data-tip]');
+  if (!el) return;
+  _tip.textContent = el.dataset.tip;
+  _tip.style.display = 'block';
+});
+document.addEventListener('mousemove', e => {
+  if (_tip.style.display === 'none') return;
+  const x = e.clientX + 14, y = e.clientY + 12;
+  const maxX = window.innerWidth  - _tip.offsetWidth  - 8;
+  const maxY = window.innerHeight - _tip.offsetHeight - 8;
+  _tip.style.left = Math.min(x, maxX) + 'px';
+  _tip.style.top  = Math.min(y, maxY) + 'px';
+});
+document.addEventListener('mouseout', e => {
+  if (!e.target.closest('[data-tip]')) return;
+  _tip.style.display = 'none';
+});
 
 let _allSessions = [];
 let _days = [];
@@ -372,11 +372,8 @@ window.addEventListener('message', e => {
   if (efficiency && efficiency.dailyScore !== undefined) {
     const g = (efficiency.grade || 'C').toLowerCase();
     scoreContainer.innerHTML = \`
-      <div class="grade-badge grade-\${g}">\${efficiency.grade}</div>
-      <div class="score-label">
-        <span class="score-title">Prompt Engineer Score</span>
-        <span class="score-val">\${efficiency.dailyScore}/100</span>
-      </div>
+      <div class="grade-badge grade-\${g}" data-tip="Prompt Engineer Score: \${efficiency.dailyScore}/100\nBased on bash error rate, context efficiency, and tool diversity.\nS=elite  A=great  B=good  C=average  F=needs work">\${efficiency.grade}</div>
+      <span style="color:var(--muted)">\${efficiency.dailyScore}/100</span>
     \`;
   } else {
     scoreContainer.innerHTML = '';
@@ -426,35 +423,25 @@ window.addEventListener('message', e => {
     : 'subscription limit';
 
   document.getElementById('cards').innerHTML = [
-    card('Today In',  fmtK(todayIn),  todaySessions.length+' sessions · '+fmtCost(todayCost)+' est.'),
-    card('Today Out', fmtK(todayOut), 'cache hit '+cacheHitPct+'%'),
-    cardWithBar('Context Window', Math.round(ctxPct)+'%', latest ? sessionLabel(latest)+' · '+fmtK(latest.tokensPerTurn??0)+'/turn' : '—', ctxPct, ctxColor),
+    card('Today In',  fmtK(todayIn),  todaySessions.length+' sessions · '+fmtCost(todayCost)+' est.',
+      'Tokens sent TO Claude today across all sessions.\nIncludes input + cache reads + cache writes.\nHigh input = lots of context re-sent each turn.'),
+    card('Today Out', fmtK(todayOut), 'cache hit '+cacheHitPct+'%',
+      'Tokens generated BY Claude today.\nCache hit % = share of input served from cache (saves cost).\nHigher cache hit = more efficient prompting.'),
+    cardWithBar('Context Window', Math.round(ctxPct)+'%', latest ? sessionLabel(latest)+' · '+fmtK(latest.tokensPerTurn??0)+'/turn' : '—', ctxPct, ctxColor,
+      'How full the active session context is (max 200K tokens).\n>60% = approaching limit, consider /compact.\n>80% = risk of truncation or degraded responses.'),
     fiveHourPct !== null
-      ? cardWithBar('5-Hour Limit', Math.round(fiveHourPct)+'%', fiveHourReset,  fiveHourPct, fiveHourPct>=80?'var(--red)':fiveHourPct>=60?'var(--yellow)':'var(--green)')
-      : card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total'),
+      ? cardWithBar('5-Hour Limit', Math.round(fiveHourPct)+'%', fiveHourReset, fiveHourPct, fiveHourPct>=80?'var(--red)':fiveHourPct>=60?'var(--yellow)':'var(--green)',
+          'Rolling 5-hour usage cap for Claude subscriptions.\nResets automatically. If this hits 100% Claude stops responding until reset.')
+      : card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total',
+          'Total JSONL session files found in ~/.claude/projects/.\nEach session = one Claude conversation thread.'),
     sevenDayPct !== null
-      ? cardWithBar('7-Day Limit', Math.round(sevenDayPct)+'%', 'subscription limit', sevenDayPct, sevenDayPct>=80?'var(--red)':sevenDayPct>=60?'var(--yellow)':'var(--green)')
-      : card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total'),
+      ? cardWithBar('7-Day Limit', Math.round(sevenDayPct)+'%', 'subscription limit', sevenDayPct, sevenDayPct>=80?'var(--red)':sevenDayPct>=60?'var(--yellow)':'var(--green)',
+          '7-day rolling usage cap for Claude subscriptions.\nResets weekly. High usage here may indicate runaway agents or very long sessions.')
+      : card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total',
+          'Total JSONL session files found in ~/.claude/projects/.\nEach session = one Claude conversation thread.'),
   ].filter((v,i,a) => a.indexOf(v)===i).join(''); // dedup if both rate limit cards are null
 
   // Activity feed
-  const feedEl = document.getElementById('activity-feed');
-  if (activity.length === 0) {
-    feedEl.innerHTML = '<p class="empty">No activity yet — configure hooks to see live updates</p>';
-  } else {
-    feedEl.innerHTML = [...activity].reverse().slice(0,30).map(r => {
-      const ts = new Date(r.ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-      const dur = r.durationMs ? (r.durationMs/1000).toFixed(1)+'s' : '';
-      const icon = r.event === 'PreToolUse' ? '▶' : r.event === 'PostToolUse' ? '✓' : r.event === 'Stop' ? '■' : '●';
-      return \`<div class="activity-item">
-        <span class="activity-ts">\${ts}</span>
-        <span class="activity-tool">\${icon} \${r.tool ?? r.event}</span>
-        <span class="activity-summary">\${r.summary ?? ''}</span>
-        <span class="activity-dur">\${dur}</span>
-      </div>\`;
-    }).join('');
-  }
-
   // Hooks notice
   const noticeEl = document.getElementById('hooks-notice');
   if (!hooksActive) {
@@ -526,15 +513,17 @@ function renderEfficiency(eff, todayIn, todayOut) {
     .reduce((a,s) => a + s.calls, 0);
   const actionRatio = totalCalls > 0 ? Math.round(readWritePct / totalCalls * 100) : null;
 
-  const runawayHtml = eff.isRunaway 
-    ? \`<div style="background:rgba(244,71,71,0.2); border:1px solid var(--red); color:var(--red); padding:10px; border-radius:8px; margin-bottom:15px; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:8px;">
-        <span>⚠️</span> RUNAWAY AGENT DETECTED: High Bash Error Rate
-       </div>\` : '';
-  
-  const budgetHtml = eff.budgetExceeded 
-    ? \`<div style="background:rgba(255,165,0,0.2); border:1px solid var(--yellow); color:var(--yellow); padding:10px; border-radius:8px; margin-bottom:15px; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:8px;">
-        <span>💰</span> SESSION BUDGET EXCEEDED ($2.00 threshold)
-       </div>\` : '';
+  const alertsHtml = [
+    eff.isRunaway  ? \`<div class="alert-pill runaway">⚠ High Bash error rate — possible runaway agent</div>\` : '',
+    eff.budgetExceeded ? \`<div class="alert-pill budget">💰 Session cost exceeded $2.00 threshold</div>\` : '',
+  ].join('');
+
+  const timeSaved = (() => {
+    const m = ((todayIn||0)*0.75/250) + ((todayOut||0)*0.75/60) + (totalCalls*1.5);
+    if (m < 1) return '—';
+    const h = Math.floor(m/60);
+    return h > 0 ? h+'h '+Math.floor(m%60)+'m' : Math.floor(m)+'m';
+  })();
 
   el.innerHTML = \`
     <div class="eff-panel">
@@ -542,62 +531,42 @@ function renderEfficiency(eff, todayIn, todayOut) {
       \${toolRows}
     </div>
     <div class="eff-panel">
-      <h4>Session Introspection</h4>
-      \${runawayHtml}
-      \${budgetHtml}
-      <div class="stat-row">
-        <span>Bash error rate</span>
+      <h4>Session Health</h4>
+      \${alertsHtml}
+      <div class="stat-row" data-tip="% of Bash tool calls that returned non-zero exit code.\n>30% = Claude thrashing on shell commands.\n>15% = worth reviewing the session.">
+        <span class="stat-label">Bash error rate <span class="tip-icon">?</span></span>
         <span class="stat-val \${errClass}">\${errPct !== null ? errPct+'%' : '—'}</span>
       </div>
-      <div class="stat-row">
-        <span>Context efficiency</span>
-        <span class="stat-val \${ctxEffClass}">\${ctxEffPct !== null ? ctxEffPct+'% output/input' : '—'}</span>
+      <div class="stat-row" data-tip="Output tokens ÷ input tokens.\nHigher = Claude producing more per token consumed.\n<5% = mostly reading context, little writing.\n>15% = good generation-to-consumption ratio.">
+        <span class="stat-label">Context efficiency <span class="tip-icon">?</span></span>
+        <span class="stat-val \${ctxEffClass}">\${ctxEffPct !== null ? ctxEffPct+'%' : '—'}</span>
       </div>
-      <div class="stat-row">
-        <span>Action ratio (Read/Write/Edit)</span>
+      <div class="stat-row" data-tip="% of tool calls spent on file operations (Read/Write/Edit).\nHigh = file-editing-heavy session.\nLow = more search/bash/web activity.">
+        <span class="stat-label">File op ratio <span class="tip-icon">?</span></span>
         <span class="stat-val">\${actionRatio !== null ? actionRatio+'%' : '—'}</span>
       </div>
-      <div class="stat-row">
-        <span>Unique tools used</span>
+      <div class="stat-row" data-tip="Number of distinct tools used in this session.\nHigher diversity = Claude using the full toolkit.\nLow diversity = narrow repetitive task pattern.">
+        <span class="stat-label">Tools used <span class="tip-icon">?</span></span>
         <span class="stat-val">\${noActivity ? '—' : eff.toolBreakdown.length}</span>
-      </div>
-      <div class="stat-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-        <span style="font-size:10px;color:var(--muted)" colspan="2">
-          High error rate → Claude thrashing on shell cmds<br/>
-          Low ctx efficiency → lots of reading, little output<br/>
-          High action ratio → editing-heavy session
-        </span>
       </div>
     </div>
     <div class="eff-panel">
-      <h4>Estimated Time Saved (Day)</h4>
-      <div class="stat-row">
-        <span>Automated Typing</span>
-        <span class="stat-val good">\${todayOut > 0 ? '+'+Math.round(todayOut * 0.75 / 60)+' mins' : '—'}</span>
+      <h4>Time Saved Today</h4>
+      <div class="stat-row" data-tip="Estimated typing time saved at 60 words/min.\nBased on today's total output tokens from Claude.">
+        <span class="stat-label">Typing <span class="tip-icon">?</span></span>
+        <span class="stat-val good">\${todayOut > 0 ? '+'+Math.round(todayOut*0.75/60)+'m' : '—'}</span>
       </div>
-      <div class="stat-row">
-        <span>Fast-reading Context</span>
-        <span class="stat-val good">\${todayIn > 0 ? '+'+Math.round(todayIn * 0.75 / 250)+' mins' : '—'}</span>
+      <div class="stat-row" data-tip="Estimated reading time saved at 250 words/min.\nBased on today's total input tokens processed by Claude.">
+        <span class="stat-label">Reading <span class="tip-icon">?</span></span>
+        <span class="stat-val good">\${todayIn > 0 ? '+'+Math.round(todayIn*0.75/250)+'m' : '—'}</span>
       </div>
-      <div class="stat-row">
-        <span>Executing Tools</span>
-        <span class="stat-val good">\${totalCalls > 0 ? '+'+Math.round(totalCalls * 1.5)+' mins' : '—'}</span>
+      <div class="stat-row" data-tip="~1.5 min saved per tool action (context-switch cost if done manually).\nRunning a Grep, Edit, or Bash by hand costs focus time.">
+        <span class="stat-label">Tool actions <span class="tip-icon">?</span></span>
+        <span class="stat-val good">\${totalCalls > 0 ? '+'+Math.round(totalCalls*1.5)+'m' : '—'}</span>
       </div>
-      <div class="stat-row" style="background: rgba(78, 201, 176, 0.1); border: 1px solid var(--green); padding: 12px; border-radius: 8px; margin-top: 16px;">
-        <span style="font-weight: 700; color: var(--green);">Total Time Saved</span>
-        <span style="font-size: 18px; font-weight: 800; color: var(--green);">
-          \${(() => {
-            const m = ((todayIn || 0) * 0.75 / 250) + ((todayOut || 0) * 0.75 / 60) + (totalCalls * 1.5);
-            if (m < 1) return '—';
-            const h = Math.floor(m / 60);
-            return h > 0 ? h + 'h ' + Math.floor(m % 60) + 'm' : Math.floor(m % 60) + 'm';
-          })()}
-        </span>
-      </div>
-      <div class="stat-row" style="margin-top:12px;padding-top:12px;border-top:none;justify-content:center;background:transparent;">
-        <span style="font-size:10px;color:var(--muted);text-align:center">
-          *Math: 250wpm reading, 60wpm typing,<br/>1.5m context-switch per tool action (Today)
-        </span>
+      <div class="total-row" data-tip="Sum of all estimated time savings today.\nMath: 250wpm reading, 60wpm typing, 1.5m per tool context-switch.">
+        <span style="font-weight:600;color:var(--green)">Total</span>
+        <span style="font-weight:700;color:var(--green)">\${timeSaved}</span>
       </div>
     </div>
   \`;
@@ -610,16 +579,16 @@ function renderEfficiency(eff, todayIn, todayOut) {
     
     const heatmapHtml = sortedFiles.map(([path, count]) => {
       const opacity = Math.min(1, 0.2 + (count / sortedFiles[0][1] * 0.8));
-      return \`<div class="stat-row" style="background:rgba(0,122,204,\${opacity/5}); padding:8px 12px; border-radius:6px; margin-bottom:4px; border-bottom:none">
-        <span style="font-family:monospace; color:var(--fg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1">\${path}</span>
-        <span style="font-weight:bold; color:var(--accent); min-width:40px; text-align:right">\${count}x</span>
+      return \`<div class="stat-row" style="background:rgba(0,122,204,\${opacity/5});padding:3px 8px;border-radius:3px;border-bottom:none">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:10px">\${path}</span>
+        <span style="font-weight:700;color:var(--accent);min-width:28px;text-align:right">\${count}x</span>
       </div>\`;
     }).join('');
 
     el.innerHTML += \`
-      <div class="eff-panel" style="grid-column: 1 / -1; margin-top: 24px;">
+      <div class="eff-panel" style="grid-column:1/-1;margin-top:10px">
         <h4>File Access Heatmap (Top 10)</h4>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
           \${heatmapHtml}
         </div>
       </div>
@@ -674,14 +643,18 @@ function dayChartLeave() {
   if (tip) tip.style.display = 'none';
 }
 
-function card(label, value, sub) {
-  return \`<div class="card"><div class="card-label">\${label}</div><div class="card-value">\${value}</div><div class="card-sub">\${sub}</div></div>\`;
+function card(label, value, sub, tip='') {
+  return \`<div class="card"\${tip ? \` data-tip="\${tip.replace(/"/g,'&quot;')}"\` : ''}>
+    <div class="card-label">\${label}\${tip ? ' <span class="tip-icon">?</span>' : ''}</div>
+    <div class="card-value">\${value}</div>
+    <div class="card-sub">\${sub}</div>
+  </div>\`;
 }
-function cardWithBar(label, value, sub, pct, color) {
-  return \`<div class="card">
-    <div class="card-label">\${label}</div>
+function cardWithBar(label, value, sub, pct, color, tip='') {
+  return \`<div class="card"\${tip ? \` data-tip="\${tip.replace(/"/g,'&quot;')}"\` : ''}>
+    <div class="card-label">\${label}\${tip ? ' <span class="tip-icon">?</span>' : ''}</div>
     <div class="card-value" style="color:\${color}">\${value}</div>
-    <div style="margin:4px 0;height:4px;background:var(--border);border-radius:2px">
+    <div style="margin:3px 0;height:3px;background:var(--border);border-radius:2px">
       <div style="height:100%;width:\${pct}%;background:\${color};border-radius:2px;transition:width .3s"></div>
     </div>
     <div class="card-sub">\${sub}</div>
