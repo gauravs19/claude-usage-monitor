@@ -203,6 +203,29 @@ export class UsageDashboardPanel implements vscode.Disposable {
   .chart-tooltip { position: absolute; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 10px; pointer-events: none; display: none; white-space: nowrap; z-index: 10; }
   svg.trend text { font-family: var(--vscode-font-family); }
 
+  /* Range tabs */
+  .range-tabs { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .range-btn { background: transparent; border: none; border-radius: 0; padding: 3px 8px; font-size: 10px; color: var(--muted); cursor: pointer; transition: background .15s,color .15s; }
+  .range-btn:hover { background: rgba(255,255,255,0.05); color: var(--fg); }
+  .range-btn.active { background: var(--accent); color: #fff; }
+
+  /* GitHub-style heatmap */
+  .heatmap-wrap { overflow-x: auto; }
+  .heatmap-grid { display: flex; gap: 3px; align-items: flex-start; }
+  .heatmap-col { display: flex; flex-direction: column; gap: 3px; }
+  .heatmap-cell { width: 12px; height: 12px; border-radius: 2px; cursor: pointer; }
+  .heatmap-labels { display: flex; gap: 3px; margin-bottom: 3px; }
+  .heatmap-month { font-size: 9px; color: var(--muted); }
+  .heatmap-day-labels { display: flex; flex-direction: column; gap: 3px; margin-right: 4px; padding-top: 0; }
+  .heatmap-day-label { font-size: 9px; color: var(--muted); height: 12px; line-height: 12px; text-align: right; }
+  .heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 6px; justify-content: flex-end; }
+  .heatmap-legend-label { font-size: 9px; color: var(--muted); }
+  .heatmap-cell.l0 { background: var(--glass-bg); border: 1px solid var(--glass-border); }
+  .heatmap-cell.l1 { background: #0e4429; }
+  .heatmap-cell.l2 { background: #006d32; }
+  .heatmap-cell.l3 { background: #26a641; }
+  .heatmap-cell.l4 { background: #39d353; }
+
   /* Hover tooltip */
   .tip { position: fixed; background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 9px; font-size: 10px; line-height: 1.5; pointer-events: none; display: none; white-space: pre-line; z-index: 100; max-width: 240px; color: var(--fg); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
   [data-tip] { cursor: help; }
@@ -214,11 +237,18 @@ export class UsageDashboardPanel implements vscode.Disposable {
 </head>
 <body>
 <div class="header">
-  <div style="display:flex;align-items:center;gap:12px">
+  <div style="display:flex;align-items:center;gap:10px">
     <h2>⚡ Claude Usage</h2>
-    <div id="score-container" style="display:flex;align-items:center;gap:8px;border-left:1px solid var(--border);padding-left:12px"></div>
+    <div id="score-container" style="display:flex;align-items:center;gap:6px;border-left:1px solid var(--border);padding-left:10px"></div>
   </div>
-  <button class="primary" onclick="refresh()">↻</button>
+  <div style="display:flex;align-items:center;gap:6px">
+    <div class="range-tabs">
+      <button class="range-btn" data-range="1" onclick="setRange(1)">Today</button>
+      <button class="range-btn" data-range="7" onclick="setRange(7)">7d</button>
+      <button class="range-btn" data-range="30" onclick="setRange(30)">30d</button>
+    </div>
+    <button class="primary" onclick="refresh()">↻</button>
+  </div>
 </div>
 
 <div id="cards" class="cards"></div>
@@ -252,7 +282,7 @@ export class UsageDashboardPanel implements vscode.Disposable {
 
 <div class="section">
   <div class="section-header" onclick="toggleSection(this)">
-    <h3>Daily Trend</h3>
+    <h3>Activity Heatmap</h3>
     <span class="toggle">▼</span>
   </div>
   <div class="section-body">
@@ -303,6 +333,45 @@ let _allSessions = [];
 let _days = [];
 let _currentProject = '';
 
+// Range selection — persisted in localStorage
+let _rangeDays = parseInt(localStorage.getItem('claudeUsage.range') || '7', 10);
+
+function setRange(days) {
+  _rangeDays = days;
+  localStorage.setItem('claudeUsage.range', days);
+  document.querySelectorAll('.range-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.range) === days);
+  });
+  renderCardsForRange();
+  applyFilter();
+}
+
+function initRange() {
+  document.querySelectorAll('.range-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.range) === _rangeDays);
+  });
+}
+
+function sessionsInRange() {
+  const cutoff = new Date(Date.now() - _rangeDays * 86400000).toISOString();
+  return _allSessions.filter(s => s.lastTs >= cutoff);
+}
+
+function renderCardsForRange() {
+  // Re-render cards using current range — called when range changes without new data
+  if (!_allSessions.length && !_days.length) return;
+  const today = new Date().toISOString().slice(0,10);
+  const ranged = sessionsInRange();
+  const rIn    = ranged.reduce((a,s) => a+s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens, 0);
+  const rOut   = ranged.reduce((a,s) => a+s.outputTokens, 0);
+  const rCost  = ranged.reduce((a,s) => a+s.estimatedCostUsd, 0);
+  const rCache = ranged.reduce((a,s) => a+s.cacheReadTokens, 0);
+  const rTotIn = ranged.reduce((a,s) => a+s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens, 0);
+  const cacheHit = rTotIn > 0 ? Math.round(rCache/rTotIn*100) : 0;
+  const label = _rangeDays === 1 ? 'Today' : \`\${_rangeDays}d\`;
+  document.getElementById('cards').innerHTML = buildCards(ranged, rIn, rOut, rCost, cacheHit, label, today);
+}
+
 function fmtK(n) {
   if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
   if (n >= 1e3) return (n/1e3).toFixed(0)+'K';
@@ -331,7 +400,37 @@ function sessionLabel(s) {
 
 function applyFilter() {
   const sel = document.getElementById('project-filter').value;
-  renderSessions(sel ? _allSessions.filter(s => s.project === sel) : _allSessions);
+  const inRange = sessionsInRange();
+  renderSessions(sel ? inRange.filter(s => s.project === sel) : inRange);
+}
+
+function buildCards(ranged, rIn, rOut, rCost, cacheHit, label, today, latest, liveMetrics, allSessions, fiveHourPct, sevenDayPct) {
+  latest = latest ?? (allSessions && allSessions[0]) ?? null;
+  const ctxPct = (liveMetrics && liveMetrics.contextPct != null) ? liveMetrics.contextPct : (latest?.contextPct ?? 0);
+  const ctxColor = ctxPct >= 80 ? 'var(--red)' : ctxPct >= 60 ? 'var(--yellow)' : 'var(--green)';
+  const fiveHourReset = (liveMetrics && liveMetrics.fiveHourResetsAt)
+    ? 'resets '+new Date(liveMetrics.fiveHourResetsAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+    : 'subscription limit';
+  const totalSessions = allSessions ? allSessions.length : 0;
+  const totalTurns = allSessions ? allSessions.reduce((a,s)=>a+s.turns,0) : 0;
+  return [
+    card(label+' In',  fmtK(rIn),  ranged.length+' sessions \xB7 '+fmtCost(rCost)+' est.',
+      'Tokens sent TO Claude in selected range.&#10;Includes input + cache reads + cache writes.&#10;High input = lots of context re-sent each turn.'),
+    card(label+' Out', fmtK(rOut), 'cache hit '+cacheHit+'%',
+      'Tokens generated BY Claude in selected range.&#10;Cache hit % = share of input served from cache (saves cost).&#10;Higher cache hit = more efficient prompting.'),
+    cardWithBar('Context', Math.round(ctxPct)+'%', latest ? fmtK(latest.tokensPerTurn??0)+'/turn' : '—', ctxPct, ctxColor,
+      'How full the active session context is (max 200K tokens).&#10;>60% = approaching limit, consider /compact.&#10;>80% = risk of truncation or degraded responses.'),
+    fiveHourPct !== null
+      ? cardWithBar('5h Limit', Math.round(fiveHourPct)+'%', fiveHourReset, fiveHourPct, fiveHourPct>=80?'var(--red)':fiveHourPct>=60?'var(--yellow)':'var(--green)',
+          'Rolling 5-hour usage cap for Claude subscriptions.&#10;Resets automatically. If this hits 100% Claude stops responding until reset.')
+      : card('Sessions', totalSessions+'', totalTurns+' turns total',
+          'Total JSONL session files found in ~/.claude/projects/.&#10;Each session = one Claude conversation thread.'),
+    sevenDayPct !== null
+      ? cardWithBar('7d Limit', Math.round(sevenDayPct)+'%', 'subscription limit', sevenDayPct, sevenDayPct>=80?'var(--red)':sevenDayPct>=60?'var(--yellow)':'var(--green)',
+          '7-day rolling usage cap for Claude subscriptions.&#10;Resets weekly. High usage here may indicate runaway agents or very long sessions.')
+      : card('Sessions', totalSessions+'', totalTurns+' turns total',
+          'Total JSONL session files found in ~/.claude/projects/.&#10;Each session = one Claude conversation thread.'),
+  ].filter((v,i,a) => a.indexOf(v)===i).join('');
 }
 
 function renderSessions(sessions) {
@@ -400,49 +499,27 @@ window.addEventListener('message', e => {
     badge.style.display = 'none';
   }
 
-  // Summary cards — always across ALL sessions for today (not filtered)
+  initRange();
+
   const today = new Date().toISOString().slice(0,10);
-  const todaySessions = sessions.filter(s => s.lastTs.slice(0,10) === today);
-  const todayIn   = todaySessions.reduce((a,s) => a+s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens, 0);
-  const todayOut  = todaySessions.reduce((a,s) => a+s.outputTokens, 0);
-  const todayCost = todaySessions.reduce((a,s) => a+s.estimatedCostUsd, 0);
-  const latest    = sessions[0] ?? null;
+  const latest = sessions[0] ?? null;
 
-  // Prefer live context % from statusLine if available
+  // Range-based summary cards
+  const ranged    = sessionsInRange();
+  const rangedIn  = ranged.reduce((a,s) => a+s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens, 0);
+  const rangedOut = ranged.reduce((a,s) => a+s.outputTokens, 0);
+  const rangedCost= ranged.reduce((a,s) => a+s.estimatedCostUsd, 0);
+  const rangedCacheRead = ranged.reduce((a,s) => a+s.cacheReadTokens, 0);
+  const rangedTotIn = ranged.reduce((a,s) => a+s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens, 0);
+  const cacheHitPct = rangedTotIn > 0 ? Math.round(rangedCacheRead/rangedTotIn*100) : 0;
+  const rangeLabel = _rangeDays === 1 ? 'Today' : \`\${_rangeDays}d\`;
+
   const ctxPct = liveMetrics?.contextPct ?? latest?.contextPct ?? 0;
-  const ctxColor = ctxPct >= 80 ? 'var(--red)' : ctxPct >= 60 ? 'var(--yellow)' : 'var(--green)';
+  const fiveHourPct = liveMetrics?.fiveHourPct ?? null;
+  const sevenDayPct = liveMetrics?.sevenDayPct ?? null;
 
-  // Cache efficiency across today
-  const todayTotalInput = todaySessions.reduce((a,s) => a+s.inputTokens+s.cacheReadTokens+s.cacheCreateTokens, 0);
-  const todayCacheRead  = todaySessions.reduce((a,s) => a+s.cacheReadTokens, 0);
-  const cacheHitPct = todayTotalInput > 0 ? Math.round(todayCacheRead / todayTotalInput * 100) : 0;
+  document.getElementById('cards').innerHTML = buildCards(ranged, rangedIn, rangedOut, rangedCost, cacheHitPct, rangeLabel, today, latest, liveMetrics, sessions, fiveHourPct, sevenDayPct);
 
-  const fiveHourPct  = liveMetrics?.fiveHourPct  ?? null;
-  const sevenDayPct  = liveMetrics?.sevenDayPct  ?? null;
-  const fiveHourReset = liveMetrics?.fiveHourResetsAt
-    ? 'resets '+new Date(liveMetrics.fiveHourResetsAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
-    : 'subscription limit';
-
-  document.getElementById('cards').innerHTML = [
-    card('Today In',  fmtK(todayIn),  todaySessions.length+' sessions · '+fmtCost(todayCost)+' est.',
-      'Tokens sent TO Claude today across all sessions.&#10;Includes input + cache reads + cache writes.&#10;High input = lots of context re-sent each turn.'),
-    card('Today Out', fmtK(todayOut), 'cache hit '+cacheHitPct+'%',
-      'Tokens generated BY Claude today.&#10;Cache hit % = share of input served from cache (saves cost).&#10;Higher cache hit = more efficient prompting.'),
-    cardWithBar('Context Window', Math.round(ctxPct)+'%', latest ? sessionLabel(latest)+' · '+fmtK(latest.tokensPerTurn??0)+'/turn' : '—', ctxPct, ctxColor,
-      'How full the active session context is (max 200K tokens).&#10;>60% = approaching limit, consider /compact.&#10;>80% = risk of truncation or degraded responses.'),
-    fiveHourPct !== null
-      ? cardWithBar('5-Hour Limit', Math.round(fiveHourPct)+'%', fiveHourReset, fiveHourPct, fiveHourPct>=80?'var(--red)':fiveHourPct>=60?'var(--yellow)':'var(--green)',
-          'Rolling 5-hour usage cap for Claude subscriptions.&#10;Resets automatically. If this hits 100% Claude stops responding until reset.')
-      : card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total',
-          'Total JSONL session files found in ~/.claude/projects/.&#10;Each session = one Claude conversation thread.'),
-    sevenDayPct !== null
-      ? cardWithBar('7-Day Limit', Math.round(sevenDayPct)+'%', 'subscription limit', sevenDayPct, sevenDayPct>=80?'var(--red)':sevenDayPct>=60?'var(--yellow)':'var(--green)',
-          '7-day rolling usage cap for Claude subscriptions.&#10;Resets weekly. High usage here may indicate runaway agents or very long sessions.')
-      : card('Total Sessions', sessions.length+'', sessions.reduce((a,s)=>a+s.turns,0)+' turns total',
-          'Total JSONL session files found in ~/.claude/projects/.&#10;Each session = one Claude conversation thread.'),
-  ].filter((v,i,a) => a.indexOf(v)===i).join(''); // dedup if both rate limit cards are null
-
-  // Activity feed
   // Hooks notice
   const noticeEl = document.getElementById('hooks-notice');
   if (!hooksActive) {
@@ -457,14 +534,14 @@ window.addEventListener('message', e => {
     noticeEl.style.display = 'none';
   }
 
-  // Efficiency section
-  renderEfficiency(efficiency, todayIn, todayOut);
+  // Efficiency section — use range-based in/out
+  renderEfficiency(efficiency, rangedIn, rangedOut);
 
   // Sessions table — apply current filter
   applyFilter();
 
-  // Daily trend chart
-  renderDayChart(days);
+  // Activity heatmap
+  renderHeatmap(days);
 });
 
 const TOOL_COLORS = {
@@ -597,51 +674,98 @@ function renderEfficiency(eff, todayIn, todayOut) {
   }
 }
 
-function renderDayChart(days) {
+function renderHeatmap(days) {
   const el = document.getElementById('day-chart');
   if (!days || days.length === 0) {
     el.innerHTML = '<p class="empty">No daily data yet</p>';
     return;
   }
-  const today = new Date().toISOString().slice(0, 10);
-  const data = days.slice(0, 14).reverse(); // oldest → newest left-to-right
-  const maxCost = Math.max(...data.map(d => d.estimatedCostUsd), 0.001);
-  const W = 560, H = 72, pad = 3;
-  const barW = Math.floor((W - pad * (data.length + 1)) / data.length);
-  const bars = data.map((d, i) => {
-    const x = pad + i * (barW + pad);
-    const h = Math.max(3, Math.round(d.estimatedCostUsd / maxCost * H));
-    const y = H - h;
-    const isToday = d.date === today;
-    const fill = isToday ? 'var(--accent)' : 'var(--muted)';
-    const lbl = d.date.slice(5); // MM-DD
-    return \`<rect x="\${x}" y="\${y}" width="\${barW}" height="\${h}" rx="2" fill="\${fill}" opacity="\${isToday ? 1 : 0.45}"
-      data-date="\${d.date}" data-sessions="\${d.sessions}" data-turns="\${d.turns}" data-cost="\${d.estimatedCostUsd.toFixed(3)}"
-      style="cursor:pointer"/>
-    <text x="\${x + barW/2}" y="\${H + 13}" text-anchor="middle" font-size="8" fill="var(--muted)">\${lbl}</text>\`;
-  }).join('');
-  el.innerHTML = \`<svg class="trend" viewBox="0 0 \${W} \${H + 18}" width="100%" style="display:block"
-    onmousemove="dayChartHover(event)" onmouseleave="dayChartLeave()">
-    \${bars}
-  </svg>\`;
-}
 
-function dayChartHover(e) {
-  const rect = e.target.closest('rect');
-  if (!rect || !rect.dataset.date) return;
-  const tip = document.getElementById('chart-tooltip');
-  tip.style.display = 'block';
-  tip.innerHTML = \`<strong>\${rect.dataset.date}</strong><br/>\${rect.dataset.sessions} sessions · \${rect.dataset.turns} turns<br/>Est. $\${rect.dataset.cost}\`;
-  const bounds = e.currentTarget.getBoundingClientRect();
-  const tipLeft = e.clientX - bounds.left + 12;
-  const tipTop  = e.clientY - bounds.top  - 40;
-  tip.style.left = tipLeft + 'px';
-  tip.style.top  = tipTop  + 'px';
-}
+  // Build a lookup of date → DaySummary
+  const byDate = {};
+  days.forEach(d => { byDate[d.date] = d; });
+  const maxCost = Math.max(...days.map(d => d.estimatedCostUsd), 0.001);
 
-function dayChartLeave() {
-  const tip = document.getElementById('chart-tooltip');
-  if (tip) tip.style.display = 'none';
+  // Build 52-week grid ending today
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  // Start from Sunday 52 weeks ago
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - (52 * 7) + 1);
+  // Back up to previous Sunday
+  startDate.setDate(startDate.getDate() - startDate.getDay());
+
+  // Month labels: collect first column where month changes
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthLabels = []; // {col, label}
+  let prevMonth = -1;
+
+  const cols = [];
+  let d = new Date(startDate);
+  let col = 0;
+  while (d <= today) {
+    const cells = [];
+    for (let row = 0; row < 7; row++) {
+      if (d > today) { cells.push(null); d.setDate(d.getDate()+1); continue; }
+      const dateStr = d.toISOString().slice(0,10);
+      const dayData = byDate[dateStr];
+      const cost = dayData ? dayData.estimatedCostUsd : 0;
+      const level = cost === 0 ? 0
+        : cost < maxCost * 0.25 ? 1
+        : cost < maxCost * 0.5  ? 2
+        : cost < maxCost * 0.75 ? 3 : 4;
+      const isToday = dateStr === today.toISOString().slice(0,10);
+      cells.push({ dateStr, level, isToday, dayData });
+      if (d.getMonth() !== prevMonth && row === 0) {
+        monthLabels.push({ col, label: monthNames[d.getMonth()] });
+        prevMonth = d.getMonth();
+      }
+      d.setDate(d.getDate()+1);
+    }
+    cols.push(cells);
+    col++;
+  }
+
+  // Render month labels row
+  const cellSize = 12, gap = 3, dayLabelW = 24;
+  const colPx = cellSize + gap;
+  const monthHtml = \`<div style="display:flex;margin-left:\${dayLabelW}px;margin-bottom:2px;position:relative;height:14px">\${
+    monthLabels.map(m => \`<span style="position:absolute;left:\${m.col*colPx}px;font-size:9px;color:var(--muted)">\${m.label}</span>\`).join('')
+  }</div>\`;
+
+  // Day labels (Mon, Wed, Fri)
+  const dayLabels = ['','Mon','','Wed','','Fri',''];
+  const dayLabelHtml = \`<div class="heatmap-day-labels">\${
+    dayLabels.map(l => \`<div class="heatmap-day-label">\${l}</div>\`).join('')
+  }</div>\`;
+
+  // Columns of cells
+  const colsHtml = cols.map(cells =>
+    \`<div class="heatmap-col">\${cells.map(c => {
+      if (!c) return \`<div class="heatmap-cell l0"></div>\`;
+      const outline = c.isToday ? 'outline:1px solid var(--accent);outline-offset:-1px;' : '';
+      const tip = c.dayData
+        ? \`data-tip="\${c.dateStr}&#10;\${c.dayData.sessions} sessions · \${c.dayData.turns} turns&#10;Est. \$\${c.dayData.estimatedCostUsd.toFixed(2)}"\`
+        : \`data-tip="\${c.dateStr}&#10;No activity"\`;
+      return \`<div class="heatmap-cell l\${c.level}" style="\${outline}" \${tip}></div>\`;
+    }).join('')}</div>\`
+  ).join('');
+
+  // Legend
+  const legendHtml = \`<div class="heatmap-legend">
+    <span class="heatmap-legend-label">Less</span>
+    \${[0,1,2,3,4].map(l => \`<div class="heatmap-cell l\${l}" style="flex-shrink:0"></div>\`).join('')}
+    <span class="heatmap-legend-label">More</span>
+  </div>\`;
+
+  el.innerHTML = \`<div class="heatmap-wrap">
+    \${monthHtml}
+    <div style="display:flex">
+      \${dayLabelHtml}
+      <div class="heatmap-grid">\${colsHtml}</div>
+    </div>
+    \${legendHtml}
+  </div>\`;
 }
 
 function card(label, value, sub, tip='') {

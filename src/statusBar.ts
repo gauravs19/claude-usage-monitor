@@ -48,13 +48,16 @@ export class StatusBarManager implements vscode.Disposable {
       return;
     }
 
-    // Prefer live statusLine data when available
-    const live = this.statusLineWatcher.getData();
+    // Only use live statusLine data if it's fresh (Claude actively running)
+    const stale = this.statusLineWatcher.isStale();
+    const live = stale ? null : this.statusLineWatcher.getData();
     const ctxPct = live
       ? (this.statusLineWatcher.getContextPct() ?? this.currentSession?.contextPct ?? 0)
       : (this.currentSession?.contextPct ?? 0);
 
-    const rl = this.statusLineWatcher.getRateLimits();
+    const rl = stale
+      ? { fiveHourPct: null, sevenDayPct: null, fiveHourResetsAt: null }
+      : this.statusLineWatcher.getRateLimits();
     const hasRateLimits = rl.fiveHourPct !== null || rl.sevenDayPct !== null;
 
     // Colour thresholds

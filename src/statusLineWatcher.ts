@@ -68,6 +68,12 @@ export class StatusLineWatcher extends EventEmitter {
     return this.data;
   }
 
+  /** True if no data, or data is older than maxAgeMs (default 10 min) */
+  isStale(maxAgeMs = 10 * 60 * 1000): boolean {
+    if (!this.data?._ts) return true;
+    return Date.now() - this.data._ts > maxAgeMs;
+  }
+
   /** Resolved context % — prefers native Claude value, falls back to computed */
   getContextPct(): number | null {
     const ctx = this.data?.context_window;

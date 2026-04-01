@@ -76,8 +76,11 @@ export function activate(context: vscode.ExtensionContext): void {
     if (UsageDashboardPanel.currentPanel) {
       const cwd = getWorkspaceCwd();
       const currentProject = cwd ? path.basename(cwd) : undefined;
-      const liveData = statusLineWatcher.getData();
-      const rateLimits = statusLineWatcher.getRateLimits();
+      const stale = statusLineWatcher.isStale();
+      const liveData = stale ? null : statusLineWatcher.getData();
+      const rateLimits = stale
+        ? { fiveHourPct: null, sevenDayPct: null, fiveHourResetsAt: null }
+        : statusLineWatcher.getRateLimits();
       const current = resolveCurrentSession(sessions);
       
       const ctxEff = current && (current.inputTokens + current.cacheReadTokens > 0)
